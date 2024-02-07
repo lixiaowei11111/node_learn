@@ -8,3 +8,4 @@ const child=execFile('node',['--version'],(error,stdout,stderr)=>{
   console.log(`stdout: ${stdout}`);// stdout: v14.21.2
   console.log(`stderr: ${stderr}`); //  stderr:
 })
+console.log();
