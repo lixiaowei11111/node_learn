@@ -1,6 +1,6 @@
 console.log(process.env,'process.env');// 输出操作系统的环境变量
 console.log(process.env.NODE_ENV,'process.env.NODE_ENV');//bash下执行 NODE_ENV=production node index.js,cmd执行 set NODE_ENV=production node index.js
-console.log(process.argv,'process.env.argv');// node index.js --trace-warnings name=aaa 
+console.log(process.argv,'process.env.argv');// bash execute node index.js --trace-warnings name=aaa 
 /**
  * 返回的是一个数组,数组的前两项固定是node路径和运行的js文件的路径
  * [
@@ -9,6 +9,26 @@ console.log(process.argv,'process.env.argv');// node index.js --trace-warnings n
   '--trace-warnings',
   'name=aaa'
 ] process.env.argv
+ */
+// 使用minimist来处理接收的命令行参数
+const  argv = require('minimist')(process.argv.slice(2));//忽略位置0,1的参数 
+console.log('minimist',argv);// node index.js -x 3 -y 4 -n5 -abc --beep=boop foo bar baz
+/**
+ minimist {
+  _: [ 'foo', 'bar', 'baz' ],
+  x: 3,
+  y: 4,
+  n: 5,
+  a: true,
+  b: true,
+  c: true,
+  beep: 'boop'
+}
+其实上面的例子分别介绍了解析参数中 number bool string array 的用法
+-x 3 -y4 -n5 都是number类型, `-<变量名><数字值>`或者`-<变量名> <数字值>`
+-abc 相当于 -a -b -c 但是后面没有参数,会被赋值为bool 
+--beep=boop 则是 `--<属性值>=<字符串>`
+foo bar baz 则是既没有 `-`,和 `--`前缀,也就不存在赋值会被列为默认属性 `-`的数组值
  */
 console.log(process.cwd(),'process.cwd');// E:\node_learn\01_node_daemon\process 输出当前工作目录
 console.log(process.config,'process.config');// 输出node的配置信息
