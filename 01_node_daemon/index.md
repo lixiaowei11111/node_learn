@@ -5,6 +5,8 @@
 + `--trace-warnings` 打印进程警告的堆栈跟踪（包括弃用）;
 + 后台执行`node`程序,执行 `node listen.js &`  加上一个 `&` 即可实现`node`的后台运行;打印日志需要写入日志文件中来读取
 
+> 在类Unix系统中,可以使用`nohup`命令或者`&`符号来实现后台运行,`nohup`命令可以让程序在关闭终端后继续运行,`&`符号则标识将程序放到后台运行
+
 + 实现监听文件改变自动重启进程的两个主要方法 `child_process`启动`node`进程 和 `fs.watch`来监听启动`node`进程的js文件
   + fs.watch 的监听是 调度操作系统上暴露的文件系统的接口, 如linux上的inotify来 监听文件的修改删除等操作
   + node下的 childr_process , cluster,worker_thread
