@@ -1,15 +1,24 @@
 {
   "dependencies": {
-    "@types/node": "^20.12.7",
-    "minimist": "^1.2.8"
+    "03_pnpm_workspaces_demo1": "workspace:*",
+    "04_pnpm_workspaces_demo2": "workspace:*",
+    "@types/lodash": "^4.17.13",
+    "@types/node": "^20.17.4",
+    "lodash": "^4.17.21",
+    "minimist": "^1.2.8",
+    "monorepo_submodule": "workspace:*",
+    "typescript": "^5.6.3"
   },
   "name": "node_learn",
   "version": "1.0.0",
   "main": "index.js",
-  "devDependencies": {},
+  "devDependencies": {
+    "lerna": "^8.1.8"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "packageManager": "pnpm@9.12.3",
   "keywords": [],
   "author": "",
   "license": "ISC",

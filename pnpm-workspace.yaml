@@ -1,0 +1,9 @@
+packages:
+  - "01_node_daemon"
+  - "02_net_http_udp"
+  - "03_pnpm_workspaces_demo1"
+  - "04_pnpm_workspaces_demo2"
+  - "monorepo_submodule"
+
+# install common dependencies: `pnpm add xxx -w` -w equal --workspace-root
+# install dependencies for specifices packages: `pnpm add xxx 03_pnpm_workspaces_demo1`

@@ -1,0 +1,3 @@
+[submodule "monorepo_submodule"]
+	path = monorepo_submodule
+	url = https://github.com/lixiaowei11111/monorepo_submodule.git
