@@ -20,7 +20,13 @@
 5. 项目根目录引用单个`package`
    通过结合`1`和`4`的方式在根目录安装`package`,然后在根目录的文件引用
 
+6. 根目录运行package的script命令
+   类似于第三步`3`,使用`--filter <package_name>`或者`-F <package_name>`来过滤
+   如: `pnpm run -F 05_process dev`
+
+
 # [`pnpm`结合`lerna`使用](https://lerna.nodejs.cn/docs/recipes/using-pnpm-with-lerna)
+
 
 # [`git submodule`](https://iphysresearch.github.io/blog/post/programing/git/git_submodule/) 
 + 使用`git submodule`解决monorepo导致git单体仓库体积膨胀的问题
@@ -71,7 +77,7 @@ $ rm -rf .git/modules/GWToolkit
 
 对于主仓库项目合作者来说，如果只是`git clone`去下载主仓库的内容，那么你会发现子模块仓库的文件夹内是空的！
 
-此时，你可以像上面「添加子模块」中说到的使用`git submodule update --init --recursive`来递归的初始化并下载子模块仓库的内容。
+此时，可以像上面「添加子模块」中说到的在项目根目录下使用`git submodule update --init --recursive`来递归的初始化并下载子模块仓库的内容。
 
 也可以分初始化和更新子模块两步走的方式来下载子模块仓库的内容：
 ```bash
