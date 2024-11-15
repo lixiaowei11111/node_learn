@@ -100,3 +100,4 @@
 3. [`nodemon`](https://github.com/remy/nodemon) 是一个node版本的自动重启服务器
 4. [`tsconfig-paths`](https://github.com/dividab/tsconfig-paths) 由于`ts-node`[不支持识别路径alias](https://juejin.cn/post/6963800542615175182),需要配合`tsconfig-paths`来解决该问题
 5. [`pm2`](https://pm2.fenxianglu.cn/docs/start/#google_vignette)PM2 是一个用于 Node.js 应用程序的生产过程管理器，具有内置的负载均衡器。它允许您使应用程序永久保持活动状态，无需停机重新加载它们，并简化常见的系统管理任务。
+6. [`concurrently`](https://www.npmjs.com/package/concurrently);可以同时运行多个命令行,用于替代`"npm run watch-js & npm run watch-less"`
