@@ -94,6 +94,22 @@ $ git clone --recursive <project url>
 以后可以在子模块仓库目录下使用 git pull origin main 或者 git push 等来进行更新与合并等操作。
 
 
+#[`Pre&Post Script`](https://docs.npmjs.com/cli/v8/using-npm/scripts#pre--post-scripts)
+
++ 要为`package.json`中"`scripts`"部分定义的任何脚本创建"`pre`"或"`post`"脚本，只需创建另一个具有相同名称的脚本，并在它们的开头添加 "`pre`" 或 "`post`"。
+
++ 如`postinstall`:在执行完`npm i`命令以后执行的命令,属于`npm`的`hooks`: `preinstall`是`npm install`执行之前的hook;`postinstall`是`npm install`执行完成以后执行的`hook`;
+
+   ```json
+   {
+      "scripts": {
+         "precompress": "{{ executes BEFORE the `compress` script }}",
+         "compress": "{{ run command to compress files }}",
+         "postcompress": "{{ executes AFTER `compress` script }}"
+      }
+   }
+   ```
+
 > 参考文档
 > https://juejin.cn/post/7425420976487415846
 > https://juejin.cn/post/7197767400098758717
