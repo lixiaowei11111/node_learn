@@ -1,19 +1,9 @@
 {
+  "extends":"./tsconfig.node.json",
   "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
-  }
+    
+  },
+  "ts-node": {
+    "files": true // 让ts-node 和nodemon 读取 自定义的.d.ts声明文件
+  },
 }

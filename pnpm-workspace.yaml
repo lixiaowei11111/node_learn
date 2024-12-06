@@ -6,6 +6,6 @@ packages:
   - "monorepo_submodule"
   - "05_process"
   - "06_eventemitter_and_stream"
-
+  - "07_node_jwt"
 # install common dependencies: `pnpm add xxx -w` -w equal --workspace-root
 # install dependencies for specifices packages: `pnpm add xxx 03_pnpm_workspaces_demo1`
