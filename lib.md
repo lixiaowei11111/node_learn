@@ -101,3 +101,15 @@
 4. [`tsconfig-paths`](https://github.com/dividab/tsconfig-paths) 由于`ts-node`[不支持识别路径alias](https://juejin.cn/post/6963800542615175182),需要配合`tsconfig-paths`来解决该问题
 5. [`pm2`](https://pm2.fenxianglu.cn/docs/start/#google_vignette)PM2 是一个用于 Node.js 应用程序的生产过程管理器，具有内置的负载均衡器。它允许您使应用程序永久保持活动状态，无需停机重新加载它们，并简化常见的系统管理任务。
 6. [`concurrently`](https://www.npmjs.com/package/concurrently);可以同时运行多个命令行,用于替代`"npm run watch-js & npm run watch-less"`
+
+## web业务开发
+
+### 1. koa2生态
++ [koa](https://www.npmjs.com/package/koa)
++ [@koa/router](https://www.npmjs.com/package/@koa/router)
++ [koa-bodyparser](https://www.npmjs.com/package/koa-bodyparser):解析POST请求中的body数据,九二一解析JSON,URL-ENCODED,TEXT等格式;http在传递body参数时使用的是流式传输,需要异步接收,手动处理会比较麻烦
+
+### 2. JS/TS数据验证库
++ 数据验证库用于确保数据的结构和类型符合预期，通常在处理用户输入、API响应或其他外部数据时使用。这些库提供了一种声明式的方式来定义数据模式，并自动执行验证逻辑，从而提高代码的可靠性和可维护性
+zod: [Zod](https://zod.dev/) 是一个专为 TypeScript 设计的库，提供了内置的类型安全功能。它支持自动推断类型，确保在编译时和运行时都能进行类型检查。
+joi: [Joi](https://joi.dev/),是[Hapi.js](https://hapi.dev/)的一个库, 本身并不提供类型安全功能，但可以与 TypeScript 一起使用。通过定义模式，Joi 可以确保数据的结构符合预期，但开发者需要手动管理类型。
