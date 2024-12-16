@@ -2,7 +2,8 @@ import { config } from 'dotenv';
 import { z } from 'zod';
 import {resolve} from '../util'
 
-config({ path: [resolve("./src/env/.env")] });
+
+config({ path: [resolve(".env")] });
 const portSchema = z.preprocess(
   (val) => parseInt(val as string, 10),
   z.number().min(1).max(65535).refine(

@@ -107,9 +107,18 @@
 ### 1. koa2生态
 + [koa](https://www.npmjs.com/package/koa)
 + [@koa/router](https://www.npmjs.com/package/@koa/router)
++ [koa-logger](https://www.npmjs.com/package/koa-logger):koa官方日志处理库,只能够满足简单需求,建议使用log4js
 + [koa-bodyparser](https://www.npmjs.com/package/koa-bodyparser):解析POST请求中的body数据,九二一解析JSON,URL-ENCODED,TEXT等格式;http在传递body参数时使用的是流式传输,需要异步接收,手动处理会比较麻烦
++ [koa-static](https://www.npmjs.com/package/koa-static):静态资源代理服务中间件,发现请求是文件时会自动从指定路径寻找正确的文件使用`node`的`Stream`来返回
+
 
 ### 2. JS/TS数据验证库
 + 数据验证库用于确保数据的结构和类型符合预期，通常在处理用户输入、API响应或其他外部数据时使用。这些库提供了一种声明式的方式来定义数据模式，并自动执行验证逻辑，从而提高代码的可靠性和可维护性
 zod: [Zod](https://zod.dev/) 是一个专为 TypeScript 设计的库，提供了内置的类型安全功能。它支持自动推断类型，确保在编译时和运行时都能进行类型检查。
 joi: [Joi](https://joi.dev/),是[Hapi.js](https://hapi.dev/)的一个库, 本身并不提供类型安全功能，但可以与 TypeScript 一起使用。通过定义模式，Joi 可以确保数据的结构符合预期，但开发者需要手动管理类型。
+
+### 3. 日志库
++ [log4js](https://www.npmjs.com/package/log4js)
+
+### 4. ORM
++ prisma
