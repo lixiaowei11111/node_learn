@@ -1,6 +1,6 @@
 import Router from "@koa/router";
 
-import { login,register } from "../controller/user.controller";
+import { login,register,updateUsername } from "../controller/user.controller";
 
 const userRouter = new Router({
   prefix: '/user',
@@ -8,5 +8,6 @@ const userRouter = new Router({
 
 userRouter.post('/login',login)
 userRouter.post('/register',register)
+userRouter.post('/update_username',updateUsername)
 
 export default userRouter.routes();

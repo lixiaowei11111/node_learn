@@ -119,6 +119,8 @@ joi: [Joi](https://joi.dev/),是[Hapi.js](https://hapi.dev/)的一个库, 本身
 
 ### 3. 日志库
 + [log4js](https://www.npmjs.com/package/log4js)
++ [winston](https://www.npmjs.com/package/winston):建议使用这个下载量最多
++ [morgan](https://www.npmjs.com/package/morgan):express官方开发的
 
 ### 4. ORM
 + prisma
