@@ -24,27 +24,29 @@
   但是设置环境变量时,不同shell的语法规则不一样,需要使用`cross-env`这样的工具来抹平不同操作系统或者不同[`shell`](https://www.runoob.com/linux/linux-shell.html)差异,
   如在windows操作系统上使用cmd需要加上set才会生效, `set NODE_ENV=production`,使用具有跨平台性质的`bash`设置环境 `NODE_ENV=production`即可
 
-## 3. child_process
+## 3. child_process(node调用命令行和node子进程)
 
 1. exec:
-  执行 shell 命令
+  直接执行 shell 命令,所以安全性较低
+  `const child=exec('dir',{ encoding: "gbk" },()=>{})`
   创建新的 shell 进程
   获取命令的输出和错误信息
 
 2. execFile:
-  执行指定的可执行文件
-  不通过 shell 执行命令
+  执行指定的可执行文件,可以通过第二个参数来传递传递参数
+  `const child=execFile('node',['--version'],(error,stdout,stderr)=>{})`
+  不能直接执行 shell 执行命令,会过滤比较危险的参数,安全性对比exec较高
   获取命令的输出和错误信息
 
-3. fork:
+3. spawn:
+  执行命令
+  不创建 shell 进程
+  返回流,可以通过Writeable或者Readable的pipe传递结果
+
+4. fork:
   衍生新的 Node.js 子进程
   执行 JavaScript 文件
   支持父子进程间通过消息进行通信
-
-4. spawn:
-  执行命令
-  不创建 shell 进程
-  支持流式处理输入输出
 
 5. 参数和返回
    + exec参数:child_process.exec(command\[, options]\[, callback])
@@ -52,3 +54,18 @@
    + fork参数: child_process.fork(modulePath\[, args]\[, options])
    + spawn参数: child_process.spawn(command\[, args]\[, options])
    + 这些函数都会返回一个[ChildProcess实例](https://nodejs.org/dist/latest-v18.x/docs/api/child_process.html#class-childprocess),可以用于监听事件以及使用kill等方法
+
+![child_process四个方法的区别](image.png)
+
+6. exec,execFile,spawn,fork这四个方法都是异步的,子进程进行时不会阻塞主进程的运行.同时也有对应的同步版本方法`execSync`,`execFileSync`,`spawnSync`
+
+
+## 4. cluster(node多进程)
++ cluster模块是构建在`child_process`模块之上的,它可以让 Node.js 在多核 CPU 上运行多个进程
++ 可以让多个node进程共享一个TCP连接
+
+1. cluster.isMater被废弃,使用cluster.isPrimary来判断是否为主进程,依据是环境变量process.env.NODE_UNIQUE_ID来判断,为undefined时返回true
+
+
+## 5. worker_thread(node多线程)
++ 
