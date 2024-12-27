@@ -8,5 +8,7 @@ packages:
   - "06_eventemitter_and_stream"
   - "07_node_jwt"
   - "08_react-ssr"
+  - "09_other_module"
+  - "10_web_stream"
 # install common dependencies: `pnpm add xxx -w` -w equal --workspace-root
 # install dependencies for specifices packages: `pnpm add xxx 03_pnpm_workspaces_demo1`
