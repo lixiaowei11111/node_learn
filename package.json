@@ -21,6 +21,8 @@
   "dependencies": {
     "03_pnpm_workspaces_demo1": "workspace:*",
     "04_pnpm_workspaces_demo2": "workspace:*",
+    "@matryoshka_lxw/eslint-config": "0.0.1",
+    "@matryoshka_lxw/prettier-config": "0.0.1",
     "dotenv": "16.4.7",
     "express": "4.21.1",
     "lodash": "^4.17.21",

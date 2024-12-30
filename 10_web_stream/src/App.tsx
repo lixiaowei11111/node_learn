@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { ChangeEventHandler, useEffect } from 'react';
 import createWritable from './stream/write';
+import createReadable from './stream/read';
 
 function App() {
   const writeInit = async () => {
@@ -16,8 +17,28 @@ function App() {
       writer.write(new ArrayBuffer(100)),
     ]);
   };
+
+  const readInit = async () => {
+    const response = await fetch('www.example.org');
+    const readable = response.body;
+    if (!readable) return;
+    const reader = readable.getReader();
+    const stream = createReadable(reader);
+    const res = await new Response(stream, { headers: { 'Content-Type': 'text/html' } }).text();
+    console.log('[debug] res', res);
+  };
+
+  const handleChange: ChangeEventHandler<HTMLInputElement> = async (e) => {
+    const file: File = e.target.files![0];
+    console.log('[debug] files', e.target.files);
+    const reader = file?.stream().getReader();
+    const readableStream = createReadable(reader);
+    console.log('[debug] ', readableStream);
+  };
+
   useEffect(() => {
-    writeInit();
+    readInit();
+    // writeInit();
   }, []);
 
   return (
@@ -25,6 +46,7 @@ function App() {
       <div>流的core concepts: https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API/Concepts</div>
       <div>使用WritableStream: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_writable_streams</div>
       <div>使用ReadableStream: https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API/Using_readable_streams</div>
+      <input type="file" id="file" onChange={handleChange} />
     </>
   );
 }
