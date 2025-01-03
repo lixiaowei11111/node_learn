@@ -1,29 +1,30 @@
-import { RouterContext } from "@koa/router";
-import prisma from "../db";
-import HttpStatus from "../model/http.model";
+import { RouterContext } from '@koa/router';
+import prisma from '../db';
+import HttpStatus from '../model/http.model';
+import { createSession, querySession } from '../service/user.service';
 
 export const login = async (ctx: RouterContext) => {
   const body = await ctx.request.body;
   if (body.username && body.password) {
-    const name=body.username as string;
-    const password=body.password as string;
-    const user=await prisma.user.findFirst({
-      where:{
+    const name = body.username as string;
+    const password = body.password as string;
+    const user = await prisma.user.findFirst({
+      where: {
         name,
-        password
-      }
-    })
-    if(user){
+        password,
+      },
+    });
+    if (user) {
+      await createSession(name);
       ctx.body = `${user.name} login success`;
-    }else{
-      ctx.body="账号或者密码错误"
-      ctx.status=HttpStatus.Unauthorized
+    } else {
+      ctx.body = '账号或者密码错误';
+      ctx.status = HttpStatus.Unauthorized;
     }
-   
   } else {
-    ctx.body = "login fail!!!"
+    ctx.body = 'login fail!!!';
   }
-}
+};
 
 export const register = async (ctx: RouterContext) => {
   const body = await ctx.request.body;
@@ -35,36 +36,40 @@ export const register = async (ctx: RouterContext) => {
         name,
         email: `${name}@gmail.com`,
         password,
-      }
-    })
-    ctx.body = "register success!!!"
+      },
+    });
+    ctx.body = 'register success!!!';
   }
-}
+};
 
-export const updateUsername=async(ctx:RouterContext)=>{
-  const body=await ctx.request.body;
-  if(body.username){
-    const name=body.username as string;
-    if(!body.newName){
-      ctx.body="newName is required"
-      ctx.status=HttpStatus.BadRequest
-      return
+export const updateUsername = async (ctx: RouterContext) => {
+  const body = await ctx.request.body;
+  if (body.username) {
+    const name = body.username as string;
+    if (!body.newName) {
+      ctx.body = 'newName is required';
+      ctx.status = HttpStatus.BadRequest;
+      return;
     }
-    const user=await prisma.user.findFirst({
-      where:{
+    const user = await prisma.user.findFirst({
+      where: {
         name,
+      },
+    });
+    if (!user) {
+      ctx.body = 'user not found';
+      ctx.status = HttpStatus.BadRequest;
+    } else {
+      const sessionId = await querySession(name);
+      if (!sessionId) {
+        ctx.body = 'sessionId not found';
+        ctx.status = HttpStatus.BadRequest;
       }
-    })
-    if(!user){
-      ctx.body="user not found"
-      ctx.status=HttpStatus.BadRequest
-    }else{
       await prisma.user.update({
-        where:{id:user.id},
-        data:{name:body.newName}
-      })
-      ctx.body="update success"
+        where: { id: user.id },
+        data: { name: body.newName },
+      });
+      ctx.body = 'update success';
     }
-
   }
-}
+};
