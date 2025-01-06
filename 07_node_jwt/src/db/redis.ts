@@ -1,26 +1,32 @@
 import { config } from 'dotenv';
 import { createClient } from 'redis';
 import { resolve } from '../util/index';
+import logger from '../logger';
 
 config({ path: [resolve('.env')] });
 const client = createClient({
   url: process.env.REDIS_URL,
 });
 
-type RedisType = typeof client;
+client.on('error', (err) => {
+  console.log('Redis Client Error', err);
+  logger.error(err);
+});
 
-export const setup = async (client: RedisType) => {
+export type RedisType = typeof client;
+
+export const setup = async (client: RedisType): Promise<RedisType> => {
   try {
-    client.once('connect', () => {
-      console.log('Connected to Redis');
-    });
-    client.on('error', (err) => {
-      console.log('Redis Client Error', err);
-      throw err;
-    });
+    if (client.isOpen) {
+      return client;
+    }
     await client.connect();
+    await client.ping();
+    console.log('[debug] connected redis');
+    return client;
   } catch (error) {
-    throw error;
+    logger.error(error);
+    process.exit();
   }
 };
 

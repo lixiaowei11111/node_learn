@@ -2,11 +2,13 @@ import Koa from 'koa';
 import router from './router';
 import parseRequestBody from './lib/bodyParser';
 import port from './config/port';
-const app = new Koa();
 import client, { setup } from './db/redis';
 
-app.use(async () => {
+const app = new Koa();
+
+app.use(async (_ctx, next) => {
   await setup(client);
+  await next();
 });
 app.use(async (ctx, next) => {
   ctx.request.body = await parseRequestBody(ctx.req);
@@ -15,4 +17,6 @@ app.use(async (ctx, next) => {
 
 app.use(router.routes()).use(router.allowedMethods());
 
-app.listen(port);
+app.listen(port, () => {
+  console.log(`server is running at http://localhost:${port}`);
+});

@@ -1,11 +1,13 @@
 import client from '../db/redis';
+import logger from '../logger';
 
 export const createSession = async (username: string) => {
   try {
     const value = await client.incr('sessionId');
+    logger.info(`redis incr: ${value}`);
     const key = `session:${username}`;
     await client.set(key, value);
-    client.expire(key, 60 * 1000);
+    client.expire(key, 1000);
   } catch (error) {
     console.log('[debug] error', error);
   }

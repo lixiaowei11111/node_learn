@@ -1,6 +1,7 @@
 import { ChangeEventHandler, useEffect } from 'react';
 import createWritable from './stream/write';
 import createReadable from './stream/read';
+import { writableStream, readableStream } from './stream/transform';
 
 function App() {
   const writeInit = async () => {
@@ -28,6 +29,13 @@ function App() {
     console.log('[debug] res', res);
   };
 
+  const transformInit = async () => {
+    const writer = writableStream.getWriter();
+    const reader = readableStream.getReader();
+    await writer.write('hello');
+    await reader.read();
+  };
+
   const handleChange: ChangeEventHandler<HTMLInputElement> = async (e) => {
     const file: File = e.target.files![0];
     console.log('[debug] files', e.target.files);
@@ -37,8 +45,9 @@ function App() {
   };
 
   useEffect(() => {
-    readInit();
+    // readInit();
     // writeInit();
+    transformInit();
   }, []);
 
   return (
@@ -46,7 +55,7 @@ function App() {
       <div>流的core concepts: https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API/Concepts</div>
       <div>使用WritableStream: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_writable_streams</div>
       <div>使用ReadableStream: https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API/Using_readable_streams</div>
-      <input type="file" id="file" onChange={handleChange} />
+      {/* <input type="file" id="file" onChange={handleChange} /> */}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { RouterContext } from '@koa/router';
 import prisma from '../db';
 import HttpStatus from '../model/http.model';
 import { createSession, querySession } from '../service/user.service';
+import logger from '../logger';
 
 export const login = async (ctx: RouterContext) => {
   const body = await ctx.request.body;
@@ -61,6 +62,7 @@ export const updateUsername = async (ctx: RouterContext) => {
       ctx.status = HttpStatus.BadRequest;
     } else {
       const sessionId = await querySession(name);
+      logger.info(`sessionId: ${sessionId}`);
       if (!sessionId) {
         ctx.body = 'sessionId not found';
         ctx.status = HttpStatus.BadRequest;
