@@ -60,3 +60,43 @@ const writableStream = new WritableStream({
 ```
 
 + 总结来说，背压策略是为了控制数据流的写入速度，确保消费者能够及时处理数据，避免资源耗尽的问题。
+
+
+
++ 如果Service是使用的ts编写,在register()或者getRegistration()应该怎么处理?
+
+////////////////// App.vue
+
+```vue
+<button @click="go">发送消息</button>
+
+// vite 第一种用法：new URL + import.meta.url
+var myWorker = new Worker(new URL('./worker.ts', import.meta.url))
+
+// vite 第二种用法：加入 ?worker 后缀标识
+import MyWorker  from './worker.ts?worker'
+const myWorker = new MyWorker()
+
+// 父接受子的消息
+myWorker.onmessage = function (e) {
+    console.log('Message received from worker', e)
+}
+
+// 父发送消息给子
+function go() {
+    myWorker.postMessage('hello')
+}
+
+////////////////// worker.ts
+
+// 子接受父的消息
+onmessage = function (e) {
+    console.log('Message received from main script')
+    const workerResult = 'Result: ' + e.data[0] * e.data[1]
+    console.log('Posting message back to main script')
+    // 子发送消息给父
+    postMessage(workerResult)
+}
+```
+
+> 参照: https://www.cnblogs.com/CyLee/p/17407587.html

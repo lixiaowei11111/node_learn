@@ -2,6 +2,7 @@ import { ChangeEventHandler, useEffect } from 'react';
 import createWritable from './stream/write';
 import createReadable from './stream/read';
 import { writableStream, readableStream } from './stream/transform';
+import { createDownload } from './sw/invoke';
 
 function App() {
   const writeInit = async () => {
@@ -44,6 +45,29 @@ function App() {
     console.log('[debug] ', readableStream);
   };
 
+  const handleStreamChange: ChangeEventHandler<HTMLInputElement> = async (e) => {
+    const files: FileList = e.target!.files!;
+    if (files.length === 0) return;
+
+    const file = files.item(0)!;
+    const reader = file.stream().getReader();
+
+    console.log('[debug] file', file);
+    const writableStream = await createDownload(file.name);
+    const writable = writableStream.getWriter();
+
+    const pump = async () => {
+      console.log('读取本地文件数据');
+      const { done, value } = await reader.read();
+      if (done) return writable.close();
+      console.log('向下载线程写入数据');
+      await writable.write(value);
+      pump();
+    };
+
+    pump();
+  };
+
   useEffect(() => {
     // readInit();
     // writeInit();
@@ -56,6 +80,7 @@ function App() {
       <div>使用WritableStream: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_writable_streams</div>
       <div>使用ReadableStream: https://developer.mozilla.org/zh-CN/docs/Web/API/Streams_API/Using_readable_streams</div>
       {/* <input type="file" id="file" onChange={handleChange} /> */}
+      <input type="file" onChange={handleStreamChange} />
     </>
   );
 }
