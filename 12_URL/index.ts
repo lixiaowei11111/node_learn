@@ -5,6 +5,8 @@
  *
  */
 
+console.log('[debug] ', Bun.version);
+
 const ybb = new URL('./', import.meta.url);
 
 console.log('[debug] ybb', ybb);
