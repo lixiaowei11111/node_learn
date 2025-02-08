@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "packageManager": "pnpm@9.15.1",
+  "packageManager": "pnpm@10.2.1",
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -28,6 +28,7 @@
     "lodash": "^4.17.21",
     "minimist": "^1.2.8",
     "monorepo_submodule": "workspace:*",
+    "tsx": "4.19.2",
     "typescript": "^5.6.3"
   }
 }

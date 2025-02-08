@@ -12,5 +12,6 @@ packages:
   - "10_web_stream"
   - "11_pi_calculation"
   - "12_URL"
+  - "13_decorator"
 # install common dependencies: `pnpm add xxx -w` -w equal --workspace-root
-# install dependencies for specifices packages: `pnpm add xxx 03_pnpm_workspaces_demo1`
+# install dependencies for specifics packages: `pnpm add xxx 03_pnpm_workspaces_demo1`
