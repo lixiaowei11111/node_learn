@@ -4,6 +4,11 @@
 1. [`chokidar`](https://github.com/paulmillr/chokidar) 是一个监听文件系统变化的工具，替代原始的fs.watch / fs.watchFile
 2. [`fs-extra`](https://github.com/jprichardson/node-fs-extra)完全可用于替代原始的fs模块,为fs的API添加了promise
 
+
+## webpack增强
+
+1. [webpack-chain](https://github.com/neutrinojs/webpack-chain#readme)链式调用实现嵌套配置,配置合并以及类型提示
+
 ## 命令行
 1. [rimraf](https://github.com/isaacs/rimraf) 
     `node`的删除文件的第三方库,当使用`webpack`进行`build`操作之前,预先删除之前残留的`dist`文件夹, `rimraf 5.0.1` 版本返回的是一个`Promsie`
