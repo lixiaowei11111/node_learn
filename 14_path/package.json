@@ -1,11 +1,10 @@
 {
-  "name": "13_decorator",
+  "name": "14_path",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx index.ts",
-    "test": "tsx require.ts"
+    "resolve": "tsx resolve.ts"
   },
   "keywords": [],
   "author": "",
