@@ -15,7 +15,7 @@
 4. package之间的互相引用
    + 通过3的方式使用,**前提是需要在`.npmrc`配置`link-workspace-packages = true`**
      + `pnpm add 03_pnpm_workspaces_demo1 -F 04_pnpm_workspaces_demo2`
-   + 和上述效果一样的,是手动在`04_pnpm_workspaces_demo2`目录下的`package.json`中的`dependencies`中手动添加依赖`"03_pnpm_workspaces_demo1": "workspace:*"`
+   + 想要和和上述效果一样,但是不开启`link-workspace-packages`,需要手动在`04_pnpm_workspaces_demo2`目录下的`package.json`中的`dependencies`中手动添加依赖`"03_pnpm_workspaces_demo1": "workspace:*"`
    
 5. 项目根目录引用单个`package`
    通过结合`1`和`4`的方式在根目录安装`package`,然后在根目录的文件引用
