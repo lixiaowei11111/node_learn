@@ -1,0 +1,36 @@
+/* stylelint-disable */
+/**  rel="stylesheet/scss" lang="scss" */
+
+/* 主色调蓝色 */
+$xr-color-primary: #337eff;
+$xr-color-success: #00bf80;
+$xr-color-warning: #fa0;
+$xr-color-danger: #f24957;
+$xr-color-info: #909399;
+$xr-color-white: #fff !default;
+$xr-color-black: #000 !default;
+$xr-color-text-primary: #222 !default;
+$xr-color-text-regular: #666 !default;
+$xr-color-text-secondary: #999 !default;
+$xr-color-text-placeholder: #bfbfbf !default;
+
+/** backgroud */
+$xr--background-color-base: #f5f5f7;
+
+/** border */
+$xr-border-color-base: #e6e7eb;
+$xr-border-radius-base: 4px;
+$xr-border-radius-small: 2px !default;
+$xr-border-line-color: #e6e7eb;
+$xr-focus-border: $xr-color-primary;
+
+// the :export directive is the magic sauce for webpack
+// https://www.bluematador.com/blog/how-to-share-variables-between-js-and-sass
+:export {
+  xrcolorprimary: $xr-color-primary;
+}
+
+.app {
+  color: $xr-color-primary;
+  background-color: #00bf80;
+}

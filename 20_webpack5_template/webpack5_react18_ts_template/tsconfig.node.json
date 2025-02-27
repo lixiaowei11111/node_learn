@@ -1,0 +1,8 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"module": "CommonJS",
+		"types": ["node"] // 需要包含的类型声明文件名列表
+	}
+}
+// tsconfig.node.json是一个TypeScript的配置文件，用于在Node.js环境中编写和运行TypeScript代码。

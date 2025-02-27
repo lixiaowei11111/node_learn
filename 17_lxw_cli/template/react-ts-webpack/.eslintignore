@@ -1,0 +1,19 @@
+build
+public
+config
+dist
+node_modules
+*.sh
+*.md
+*.woff
+*.ttf
+.vscode
+.idea
+.husky
+.local
+.eslintrc.js
+.prettierrc.js
+*.config.js
+# .postcss.config.js
+# .commitlint.config.js
+app.js

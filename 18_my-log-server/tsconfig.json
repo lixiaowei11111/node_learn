@@ -1,0 +1,10 @@
+{
+  "extends":"./tsconfig.node.json",
+  "compilerOptions": {
+    
+  },
+  "ts-node": {
+    "files": true // 让ts-node 和nodemon 读取 自定义的.d.ts声明文件
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,59 @@
+{
+  "name": "create-lxw-cli",
+  "version": "1.0.0",
+  "description": "Experimental scaffolding for non-production environments, primarily designed for quickly creating React + Webpack + TypeScript projects.",
+  "main": "index.ts",
+  "type": "module",
+  "homepage": "https://github.com/lixiaowei11111/lxw-cli.git",
+  "scripts": {
+    "dev": "node --experimental-specifier-resolution=node --loader ts-node/esm src/index.ts",
+    "build": "tsc",
+    "start": "node --experimental-specifier-resolution=node dist/index.js",
+    "lint": "eslint --ext .ts .",
+    "lint:fix": "eslint --fix --ext .ts ."
+  },
+  "bin": {
+    "create-lxw-cli": "index.js"
+  },
+  "keywords": [
+    "cli",
+    "react",
+    "webpack",
+    "boilerplate",
+    "ts"
+  ],
+  "author": "lxw",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.2",
+    "@types/inquirer": "^9.0.3",
+    "@types/minimist": "^1.2.2",
+    "@types/node": "^20.4.1",
+    "@types/prompts": "^2.4.4",
+    "commander": "^11.0.0",
+    "cross-spawn": "^7.0.3",
+    "handlebars": "^4.7.7",
+    "inquirer": "^9.2.7",
+    "kolorist": "^1.8.0",
+    "minimist": "^1.2.8",
+    "ora": "^6.3.1",
+    "prompts": "^2.4.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6",
+    "unbuild": "^1.2.1"
+  },
+  "dependencies": {
+    "@types/fs-extra": "^11.0.1",
+    "@types/git-clone": "^0.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.44.0",
+    "eslint-config-prettier": "^8.8.0",
+    "fs-extra": "^11.1.1",
+    "git-clone": "^0.2.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": "^14.18.0 || >=16.0.0"
+  }
+}

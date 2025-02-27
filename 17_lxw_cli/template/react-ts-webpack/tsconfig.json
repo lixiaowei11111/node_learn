@@ -1,0 +1,44 @@
+{
+	"compilerOptions": {
+		"target": "es6",
+		"noImplicitAny": true, // 为true时不允许使用any
+		"module": "esnext",
+		"lib": ["dom", "es2017"],
+		"jsx": "react-jsx", // 告诉 TypeScript 使用 ES 模块语法来处理 JSX。
+		"jsxImportSource": "react", // 其设置为 React 库的导入来源。对于 React 18+，你可以将其设置为 "react"。
+		// "jsxFactory": "React.createElement",
+		// "jsxFragmentFactory": "React.Fragment",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"noEmit": true,
+		"resolveJsonModule": true,
+		"allowSyntheticDefaultImports": true,
+		"experimentalDecorators": true, // 开启装饰器语法
+		"moduleResolution": "node",
+		"baseUrl": "./",
+		"paths": {
+			"@": ["src"],
+			"@/*": ["src/*"],
+			"@API/*": ["src/api/*"],
+			"@ASSETS/*": ["src/assets/*"],
+			"@COMPONENTS/*": ["src/components/*"],
+			"@CONSTANTS/*": ["src/constants/*"],
+			"@LAYOUTS/*": ["src/layouts/*"],
+			"@REDUX/*": ["src/redux/*"],
+			"@ROUTES/*": ["src/routes/*"],
+			"@STYLES/*": ["src/styles/*"],
+			"@UTILS/*": ["src/utils/*"],
+			"@VIEWS/*": ["src/views/*"]
+		},
+		"typeRoots": ["./node_modules/@types", "./src/typings"],
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"allowUnusedLabels": true
+	},
+	"include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx"],
+	"exclude": ["node_modules/*", "dist", "**/*.js"]
+}

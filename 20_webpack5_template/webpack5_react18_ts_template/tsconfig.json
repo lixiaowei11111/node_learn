@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"outDir": "./dist/",
+		"noImplicitAny": true, // 为true时不允许使用any
+		"module": "esnext", // 指定使用模块: 'commonjs', 'amd', 'system', 'umd' or 'es2015'
+		"target": "es6",
+		"lib": ["es2017", "dom"], // 指定要包含在编译中的库文件
+		"jsx": "react",
+		"jsxFactory": "React.createElement",
+		"jsxFragmentFactory": "React.Fragment",
+		"allowJs": true,
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"typeRoots": ["./node_modules/@types", "./src/typings"],
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		// 解析非相对模块名的基准目录
+		"baseUrl": "./",
+		// 模块名到基于 baseUrl的路径映射的列表。
+		"paths": {
+			"@": ["src"],
+			"@/*": ["src/*"]
+		}
+	},
+	"include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx"],
+	"exclude": ["node_modules/*", "dist", "**/*.js"]
+}

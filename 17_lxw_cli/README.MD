@@ -1,0 +1,3 @@
+npx create-lxw-cli app --template react
+yarn lxw-cli app 
+...
