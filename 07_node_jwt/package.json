@@ -6,15 +6,14 @@
   "scripts": {
     "dev": "nodemon",
     "build": "rm -rf dist && tsc",
-    "start": "pm2 start ecosystem.config.js",
-    "status": "pm2 status ecosystem.config.js",
-    "stop": "pm2 stop ecosystem.config.js",
-    "pm2:delete": "pm2 delete ecosystem.config.js",
+    "start": "pm2 start ecosystem.config.cjs",
+    "status": "pm2 status ecosystem.config.cjs",
+    "stop": "pm2 stop ecosystem.config.cjs",
+    "pm2:delete": "pm2 delete ecosystem.config.cjs",
     "pm2:log": "pm2 log",
     "db:pull": "prisma db pull",
     "db:generate": "prisma generate",
-    "db:v": "prisma -v",
-    "prestart": "pm2 install typescript"
+    "db:v": "prisma -v"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +30,7 @@
     "redis": "4.7.0",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
+    "tsx": "4.19.2",
     "winston": "3.17.0",
     "zod": "3.24.0"
   },

@@ -104,7 +104,9 @@
 
 ### Typescript运行时ts-node和tsx
 2. [`ts-node`](https://github.com/TypeStrong/ts-node) 是一个node版本的ts运行时
-3. [`tsx`](https://tsx.is/) 是一个相对于ts-node配置更少,更轻量,更快,内存占用更少的typescript运行时
+
+3. [**`tsx`**](https://tsx.is/) 基于ESBuild, 是一个相对于ts-node配置更少,更轻量,更快,内存占用更少的typescript运行时/编译器
+   1. PM2中配置tsx的[方法](https://futurestud.io/tutorials/pm2-use-tsx-to-start-your-app):将`tsx`作为node的[ESM加载器](https://nodejs.org/api/module.html#customization-hooks)来动态编译运行ts文件:`node --import tsx`
 
 4. [`nodemon`](https://github.com/remy/nodemon) 是一个node版本的自动重启服务器
 5. [`tsconfig-paths`](https://github.com/dividab/tsconfig-paths) 由于`ts-node`[不支持识别路径alias](https://juejin.cn/post/6963800542615175182),需要配合`tsconfig-paths`来解决该问题

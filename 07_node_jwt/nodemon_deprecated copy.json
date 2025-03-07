@@ -1,0 +1,6 @@
+// ts-node配置太麻烦,直接使用tsx简单也快很多
+{
+  "watch": ["src"],
+  "ext": "ts",
+  "exec": "ts-node -r tsconfig-paths/register src/index.ts"
+}
