@@ -205,6 +205,12 @@ importers:
 
   14_path: {}
 
+  21_typescript:
+    dependencies:
+      tsx:
+        specifier: 4.19.2
+        version: 4.19.2
+
   monorepo_submodule: {}
 
 packages:
