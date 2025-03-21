@@ -61,6 +61,10 @@ export default defineConfig({
 			})
 		]
 	},
+	devServer:{
+		open:true,
+		port:1999
+	},
 	experiments: {
 		css: true
 	}

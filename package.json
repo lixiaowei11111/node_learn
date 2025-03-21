@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/express": "^5.0.0",
     "@types/lodash": "^4.17.13",
     "@types/node": "^20.17.4",
