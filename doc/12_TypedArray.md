@@ -97,7 +97,7 @@ console.log('[debug] buf2',buf2,buf2.byteLength );//不能直接读取ArrayBuffe
 ```
 
 ### [DataView](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/DataView)
-+ 第一种允许你读写ArrayBuffer的视图是DataView。这个视图专为文件I/O和网络I/O设计，其API 支持对缓冲数据的高度控制，但相比于其他类型的视图性能也差一些。DataView 对缓冲内容没有任何预设，也不能迭代。
++ 第一种允许你读写ArrayBuffer的视图是DataView。这个视图专为文件I/O和网络I/O设计，其API 支持对缓冲数据的高度控制，但**相比于其他类型的视图性能也差一些**。DataView 对缓冲内容没有任何预设，也不能迭代。
 + 必须在对已有的ArrayBuffer读取或写入时才能创建DataView 实例。这个实例可以使用全部或部分ArrayBuffer，且维护着对该缓冲实例的引用，以及视图在缓冲中开始的位置。
 
 #### DataView的创建
@@ -148,11 +148,11 @@ console.log('[debug] ', fullView.buffer === buf3); //true
   + 最后是内存中值的字节序。默认为大端字节序。
 
 + 对ElementType的理解
-  + 为什么需要ElementType,ElementType的作用类似于指针变量的类型,如rust从指定的内存地址处读取一个值,然后需要一个类型来接受内存地址上存储的值
+  + **为什么需要ElementType,ElementType的作用类似于指针变量的类型,如rust从指定的内存地址处读取一个值,然后需要一个类型来接受内存地址上存储的值**
   + 如:
   ```rust
   let mem_address = 0x012345usize;
-  let r = mem_address as *const i32;//
+  let r = mem_address as *const i32;//以i32的形式来接收指定内存地址中的数据
   ```
 
 
@@ -172,3 +172,157 @@ console.log('[debug] ', fullView.buffer === buf3); //true
 
 
 + DataView 为上表中的每种类型都暴露了 get 和 set 方法，这些方法使用 byteOffset（字节偏移量）定位要读取或写入值的位置。类型是可以互换使用的
+
+```TypeScript
+const buf3 = new ArrayBuffer(16);
+
+// 默认使用全部
+const fullView = new DataView(buf3); //默认使用整个ArrayBuffer
+console.log('[debug] ', fullView.buffer === buf3); //true
+console.log(
+  '[debug] ',
+  fullView.byteLength === buf3.byteLength,
+  fullView.byteLength,
+); //true 2
+
+console.log('[debug] fullView.byteOffset', fullView.byteOffset); //0
+// 构造函数的第二个参数为偏移量起始点,第三个参数为字节长度,而不是偏移量结束点
+const halfView = new DataView(buf3, 2, 8);
+console.log('[debug] halfView.buffer === buf3', halfView.buffer === buf3); //true
+console.log('[debug] halfView.byteOffset', halfView.byteOffset); //2
+console.log('[debug] halfView.byteLength', halfView.byteLength); //8
+
+// 如果只设置了偏移量,不设置字节长度,则会使用剩余的缓冲区
+const restView = new DataView(buf3, 10);
+console.log('[debug] restView.buffer === buf3', restView.buffer === buf3); //true
+console.log('[debug] restView.byteOffset', restView.byteOffset); //10
+console.log('[debug] restView.byteLength', restView.byteLength); //6
+```
+
+##### 字节序
++ 由上可知字节序也分为大端序(`big endian`)和小端序(`little endian`),DataView所有的I/O方法默认为大端序,对于大于单个字节的方法如Uint16,Float32等,都可通过第二个参数设置为小端序
++ 如: `dataview.getUint16(byteOffset [, littleEndian])`,`dataview.setInt16(byteOffset, value [, littleEndian])`
+
++ 程序在内存中读取数据时，以字节为最小单位从低地址向高地址依次访问。对于多字节数据（如int、float），其字节在内存中的排列顺序由系统的字节序（大端或小端）决定。
++ 大端序其实就是将数据的高位字节在内存低地址位,低位字节存在高地址位,程序会优先从低地址位来读取数据数据的高位字节,可以用来判断数据的正负性质
++ 小端序则是将数据的低位字节存在低地址位,高位字节在高地址位,程序会优先从低地址位读取到数据的低位字节,利用这个特性可以用来判断数据的奇偶性质
+
++ 但是**DataView 的字节序设置不会改变内存中数据的实际存储顺序，也不会改变程序按地址递增（低→高）读取字节的底层规则，它仅影响多字节数据在读取后的解析逻辑，即如何将连续读取的多个字节组合为最终的数值。**
+
++ 简单理解就是: 
+  + DataView在读取数据时默认为大端序的展示顺序是 数据高位到数据低位;开启小端序展示顺序时 数据低位至数据高位;
+  + DataView在写入数据时
+    + 默认为大端序的存储由 低位地址 -> 高位地址 :对应存储数据为 数据高位->数据低位;
+    + 开启小端序的存储顺序是由 低位地址->高位地址: 对应的存储数据顺序是 数据低位->数据高位
+
+```TypeScript
+// DataView读取内存数据时,需要指定数据类型即ElementType,每个ElementType都有对应的get和set方法
+
+// 1. 在内存中分配两个字节大小的内存缓冲区,并声明DataView视图用于IO
+const buf4 = new ArrayBuffer(2);
+const view = new DataView(buf4);
+
+// 2. ArrayBuffer开辟的内存区内默认值都为0
+// 说明整个缓冲确实所有二进制位都是 0
+// 检查第一个和第二个字符
+console.log('[debug] view.getInt8(0)', view.getInt8(0)); //0
+console.log('[debug] view.getInt8(1)', view.getInt8(1)); //0
+// 也可以利用16位检查两个字节
+console.log('[debug] view.getUint16(0)', view.getInt16(0)); //0
+
+// 3. 将整个缓冲区数据都设置为1
+view.setUint8(0, 255);
+view.setUint8(1, 0xff);
+
+// 4.如果把它当成二补数的有符号整数，则应该是-1
+console.log('[debug] ', view.getInt16(0)); //-1
+
+console.log('[debug] ', view);
+
+// DataView开启小端序
+
+view.setInt8(0, 0x80);
+view.setInt8(1, 0x01);
+// 缓冲内容（为方便阅读，人为加了空格）
+// 0x8 0x0 0x0 0x1
+// 1000 0000 0000 0001
+
+// DataView默认按照大端序读取Uint16
+// 按大端字节序读取 Uint16
+// 0x80 是高字节，0x01 是低字节
+// 0x8001 = 2^15 + 2^0 = 32768 + 1 = 32769
+console.log('[debug] DataView默认为大端序读取', view.getUint16(0)); //32769
+
+//开启little endian
+// 按小端字节序读取 Uint16
+// 0x01 是高字节，0x80 是低字节
+// 0x0180 = 2^8 + 2^7 = 256 + 128 = 384
+console.log(
+  '[debug] DataView Uint16方法按照小端序组装',
+  view.getUint16(0, true),
+); //384
+
+// 按照大端序写入数据
+
+view.setUint16(0, 0x0004);
+console.log(
+  '[debug] DataView默认大端序写入:  view.getUint8, 地址位:0 ',
+  view.getUint8(0),
+); //0
+console.log(
+  '[debug] DataView默认大端序写入:  view.getUint8, 地址位:1 ',
+  view.getUint8(1), //4
+);
+
+// 按照小端序写入数据
+view.setUint16(0, 0x0010, true);
+// 真值 0000 0000 0001 0000
+// 小端序存储时
+// 低低地址位 -> 高地址位
+// 0001 0000 0000 0000
+
+console.log(
+  '[debug] 按照大端序的方式读取按照小端序存储的数据 getUint16(0)',
+  view.getUint16(0),
+); //4096 2的12次方
+
+console.log(
+  '[debug] 读取按照小端序存储的数据 view.getUint8(0), 低地址位:0',
+  view.getUint8(0),
+); //16 2的4次方
+console.log(
+  '[debug] 读取按照小端序存储的数据 view.getUint8(1) 高地址位:1',
+  view.getUint8(1),
+); //0
+```
+
+##### 边界情况
++ DataView 完成读、写操作的前提是必须有充足的缓冲区，否则就会抛出 RangeError
++ DataView 在写入缓冲里会尽最大努力把一个值转换为适当的类型，后备为 0。如果无法转换，则
+抛出 TypeError。
+
+```TypeScript
+const buf5 = new ArrayBuffer(4);
+const view2 = new DataView(buf5);
+
+// 越界访问会导致错误
+// view2.setInt32(1, 255); //Uncaught RangeError: Offset is outside the bounds of the DataViewat DataView.prototype.setInt32
+
+// 写入数据时数字大小越界会进行取模运算
+view2.setUint8(0, 300);
+
+console.log('[debug] view2.setUint8(0, 300);', view2.getUint8(0)); //44
+
+// 传入不能转换为数字的类型时会导致类型错误
+// view2.setUint8(1, Symbol.for('123')); //Uncaught TypeError: Cannot convert a Symbol value to a number at DataView.prototype.setUint8
+
+// 一般情况下hi自动转换为数字类型,转换不了就会报错
+view2.setUint8(1, '259'); //3
+console.log('[debug] view2.setUint8(0, 300);', view2.getUint8(1)); //82
+```
+
+### [定型数组](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/TypedArray)
+
++ 定型数组是另一种形式的 ArrayBuffer 视图。虽然概念上与 DataView 接近，**但定型数组的区别在于，它特定于一种 ElementType 且遵循系统原生的字节序**。相应地，定型数组提供了适用面更广的API 和更高的性能。设计定型数组的目的就是提高与 WebGL 等原生库交换二进制数据的效率。由于定型数组的二进制表示对操作系统而言是一种容易使用的格式，JavaScript 引擎可以重度优化算术运算、+按位运算和其他对定型数组的常见操作，因此使用它们速度极快。
+
++ 创建定型数组的方式包括读取已有的缓冲、使用自有缓冲、填充可迭代结构，以及填充基于任意类型的定型数组。另外，通过<ElementType>.from()和<ElementType>.of()也可以创建定型数组
