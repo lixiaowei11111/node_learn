@@ -152,5 +152,119 @@ console.log(
   uInt16Array.byteLength,
 ); //6 12
 
-// 3. 基于普通数组创建
+// 3. 基于普通数组创建,数组长度将会作为TypedArray的初始长度
 const int32 = new Uint32Array([2, 4, 6, 8]);
+console.log(
+  '[debug] new Uint32Array([2, 4, 6, 8]);',
+  int32,
+  int32.length,
+  int32.byteLength,
+); //4 16 4
+
+// 4. 复制现有的array创建
+const uint16 = new Uint16Array(int32);
+console.log(
+  '[debug] Uint16Array(int32)',
+  uint16,
+  uint16.length,
+  uint16.byteLength,
+); //4 8
+
+// 5. TypedArray的构造函数和实例都有一个 BYTES_PER_ELEMENT属性,用来表示TypedArray中的每个元素的大小,单位为byte
+console.log(
+  '[debug] ',
+  Float32Array.BYTES_PER_ELEMENT,
+  Uint8ClampedArray.BYTES_PER_ELEMENT,
+); //4 1
+
+// 6. 定型数组的很多行为和普通数组相似,其中，返回新数组的方法也会返回包含同样元素类型（element type）的新定型数组：
+
+const uint32 = new Uint32Array([1, 2, 3]);
+const uint32Copy = uint32.map((item) => item * 2);
+console.log(
+  '[debug] uint32Copy instanceof Uint32Array,uint32Copy === uint32,',
+  uint32Copy instanceof Uint32Array,
+  uint32Copy === uint32,
+); //true false
+
+// 7. TypedArray具有迭代器属性Symbol.Iterator,可以使用for of 扩展操作符等方法来遍历
+const int16 = new Int16Array([1, 1, 4, 5, 1, 4]);
+
+for (const element of int16) {
+  console.log('[debug] ', element); // 1 1 4 5 1 4
+}
+
+console.log('[debug] Math.max(...int16)', Math.max(...int16)); //5
+
+for (const key in int16) {
+  console.log('[debug] ', key); //0 1 2 3 4 5
+}
+
+// 8. set和 subArray方法
+//  set用于原有的改变定型数组
+const uint32From = Uint32Array.from('13579');
+console.log('[debug] Uint32Array.from("13579")', uint32From); //1 3 5 7 9
+uint32From.set([1, 2, 3, 4]);
+// set的默认targetOffset 偏移量为0
+console.log('[debug] uint32From', uint32From); // 1 2 3 4 9
+
+// 溢出会造成边界错误
+// uint32From.set(Uint16Array.of(1, 2, 3), 4); //ArrayBuffer.ts:211 Uncaught RangeError: offset is out of bounds
+
+// subArray方法基于原来的定型数组来创建一个新的定型数组
+const source = Uint32Array.of(1, 2, 3, 4, 5, 6);
+const fullCopy = source.subarray(); // 不加索引复制全部 1 2 3 4 5 6
+const startCopy = source.subarray(1); //从第二个元素开始复制 2 3 4 5 6
+const partCopy = source.subarray(1, 3); //从第2个元素开始复制到第4个元素结束 2 3 4
+console.log('[debug] ', source === fullCopy, fullCopy, startCopy, partCopy);
+
+// 9. 溢出控制
+
+// 长度为 2 的有符号整数数组
+// 每个索引保存一个二补数形式的有符号整数
+// 范围是-128（-1 * 2^7）~127（2^7 - 1）
+const ints = new Int8Array(2);
+
+// 长度为 2 的无符号整数数组
+// 每个索引保存一个无符号整数
+// 范围是 0~255（2^7 - 1）
+const unsignedInts = new Uint8Array(2);
+
+// 上溢的位不会影响相邻索引
+// 索引只会取最低有效位上的8位
+const num = 114514;
+console.log(
+  '===============================>[debug] ',
+  num.toString(2),
+  num.toString(16),
+  (0b01010010).toString(10),
+); //11011111101010010 1bf52 82
+unsignedInts[0] = num; // 0x100
+console.log('[debug] unsignedInts', unsignedInts);
+[82, 0];
+
+// 下溢的位会被转换为其无符号的等价值
+// 计算机中负数需要用补码表示
+// 0xFF 是以二补数形式表示的-1（截取到 8 位）,
+//  -1的有效位用补码表示即1 => 0000 00001 =>取反得到反码 1111 1110 => 反码+1得到补码 1111 1111 用16进制即为 0xFF,其实就是
+
+// 但 255 是一个无符号整数
+unsignedInts[1] = -1; // 0xFF (truncated to 8 bits)
+console.log(unsignedInts); // [0, 255]
+
+unsignedInts[1] = -2; // 0000 0010 => 取反 1111 1101 => 补码 1111 1110 用16进制表示为0xFE
+console.log(unsignedInts); // [0, 254]
+
+// 上溢自动变成二补数形式
+// 0x80 是无符号整数的 128，是二补数形式的-128
+ints[0] = 128; //0x 1000 0000 => 取反 0x 1111 1111 => 补码 1 1000 0000=>-128
+console.log(ints); // [-128,0]
+
+//
+ints[1] = -129; // 0x 1 1000 0001=>取反 0111 1110=>补码 0111 1111=> 127
+console.log('[debug] ', ints); //[-128, 127];
+
+// 除了特殊的夹板类型：Uint8ClampedArray则不允许溢出 超出最大值 255 的值会被向下舍入为 255，而小于最小值 0 的值会被向上舍入为 0。
+
+const clamped = Uint8ClampedArray.of(288, -1000);
+console.log('[debug] ', clamped); // [255,0]

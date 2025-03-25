@@ -1,6 +1,31 @@
 ## JS二进制之: TypedArray
 + JS中跟二进制相关的概念包括:ArrayBuffer,TypedArray,Stream,Blob,Buffer(Nodejs)
 
+### 二进制 原码 反码 补码是什么?
+
++ 原码：将一个整数，转换成二进制，就是其原码。
+  + 如单字节的5的原码为：0000 0101；-5的原码为1000 0101。
+
+
++ 反码：正数的反码就是其原码；负数的反码是将原码中，除符号位以外，每一位取反。
+
+  + 如单字节的5的反码为：0000 0101；-5的反码为1111 1010。
+
+
++ 补码：正数的补码就是其原码；负数的反码+1就是补码。
+
+  + 如单字节的5的补码为：0000 0101；-5的原码为1111 1011。
+
++ **负数补码转为原码 也是取反再加1**,
++ 由于CPU中只有加法器,其实负数的补码一切设计都是基于模运算和同余数的概念: A−B=A+(−B)=A+(2^n−B)，结果自动对2n取模
++ 如图:![负数的补码]("./assets/负数的补码与模的关系.png)
+
+
++ **在计算机中，正数是直接用原码表示的**，如单字节5，在计算机中就表示为：0000 0101。
++ **负数用补码表示，如单字节-5，在计算机中表示为`1111 1011`**,而不是1000 0101
++ [为什么负数要用补码表示呢?](https://zhuanlan.zhihu.com/p/47719434)
++ [补码为什么需要+1](https://zhuanlan.zhihu.com/p/99082236)
+
 ### [字节序](https://www.ruanyifeng.com/blog/2022/06/endianness-analysis.html)
 
 #### 字节序的定义与核心概念
@@ -85,6 +110,8 @@
 + Float32Array 实际上是一种“视图”，可以允许 JavaScript 运行时访问一块名为 ArrayBuffer 的预分配内存。ArrayBuffer 是所有定型数组及视图引用的基本单位。
 + ArrayBuffer是一个构造函数,且**一旦创建就不能变更大小,也不能直接变更ArrayBuffer实例的内容**,要对ArrayBuffer开辟的内存进行Write/Read(或者I/O)操作,需要使用View类型的数组,View有DataView和TypedArray两种类型
 + View实例持有的是ArrayBuffer实例的引用,而非ArrayBuffer的副本,而ArrayBuffer.prototpye.slice方法是复制一个ArrayBuffer的数据,开辟一个新的内存缓存区域
+
+> 在最新的MDN文档中,ArrayBuffer是可以通过添加构造函数属性[`maxByteLength`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer#%E8%B0%83%E6%95%B4_arraybuffer_%E7%9A%84%E5%A4%A7%E5%B0%8F)改变大小的,`const buffer = new ArrayBuffer(8, { maxByteLength: 16 });`
 
 ```TypeScript
 const buf1 = new ArrayBuffer(16);
@@ -323,6 +350,198 @@ console.log('[debug] view2.setUint8(0, 300);', view2.getUint8(1)); //82
 
 ### [定型数组](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/TypedArray)
 
+#### 定型数组的构造函数和实例
+
 + 定型数组是另一种形式的 ArrayBuffer 视图。虽然概念上与 DataView 接近，**但定型数组的区别在于，它特定于一种 ElementType 且遵循系统原生的字节序**。相应地，定型数组提供了适用面更广的API 和更高的性能。设计定型数组的目的就是提高与 WebGL 等原生库交换二进制数据的效率。由于定型数组的二进制表示对操作系统而言是一种容易使用的格式，JavaScript 引擎可以重度优化算术运算、+按位运算和其他对定型数组的常见操作，因此使用它们速度极快。
 
 + 创建定型数组的方式包括读取已有的缓冲、使用自有缓冲、填充可迭代结构，以及填充基于任意类型的定型数组。另外，通过<ElementType>.from()和<ElementType>.of()也可以创建定型数组
+
+```TypeScript
+// 1.基于ArrayBuffer的引用创建
+// 开启一个16 byte大小的内存缓冲区
+const buf6 = new ArrayBuffer(16);
+// 创建一个引用该缓冲的Uint32Array
+const uInt32Array = new Uint32Array(buf6);
+// 这个定型数组知道自己的每个元素需要 4 字节,因此长度为4
+console.log('[debug] uInt32Array.length', uInt32Array.length); //4
+
+//2. 直接创建固定长度的定型数组
+const uInt16Array = new Uint16Array(6);
+// 因为每个单位的大小是 2byte,所以uInt16Array的大小为 12byte
+console.log(
+  '[debug] Uint16Array(6)',
+  uInt16Array,
+  uInt16Array.length,
+  uInt16Array.byteLength,
+); //6 12
+
+// 3. 基于普通数组创建,数组长度将会作为TypedArray的初始长度
+const int32 = new Uint32Array([2, 4, 6, 8]);
+console.log(
+  '[debug] new Uint32Array([2, 4, 6, 8]);',
+  int32,
+  int32.length,
+  int32.byteLength,
+); //4 16 4
+
+// 4. 复制现有的array创建
+const uint16 = new Uint16Array(int32);
+console.log(
+  '[debug] Uint16Array(int32)',
+  uint16,
+  uint16.length,
+  uint16.byteLength,
+); //4 8
+
+// 5. TypedArray的构造函数和实例都有一个 BYTES_PER_ELEMENT属性,用来表示TypedArray中的每个元素的大小,单位为byte
+console.log(
+  '[debug] ',
+  Float32Array.BYTES_PER_ELEMENT,
+  Uint8ClampedArray.BYTES_PER_ELEMENT,
+); //4 1
+```
+
+#### 定型数组的行为
+
++ 从很多方面看，定型数组与普通数组都很相似。定型数组支持如下操作符、方法和属性:
+  + []
+  + copyWithin()
+  + entries() 
+  + every()
+  + fill()
+  + filter()
+  + find()
+  + findIndex()
+  + forEach()
+  + indexOf()
+  + join()
+  + keys()
+  + lastIndexOf()
+  + length
+  + map()
+  + reduce()
+  + reduceRight()
+  + reverse()
+  + slice()
+  + some()
+  + sort()
+  + toLocaleString()
+  + toString()
+  + values()
+
++ 其中，返回新数组的方法也会返回包含同样元素类型（element type）的新定型数组：
+
+```TypeScript
+const uint32 = new Uint32Array([1, 2, 3]);
+const uint32Copy = uint32.map((item) => item * 2);
+console.log(
+  '[debug] uint32Copy instanceof Uint32Array,uint32Copy === uint32,',
+  uint32Copy instanceof Uint32Array,
+  uint32Copy === uint32,
+); //true false
+```
+
++ TypedArray具有迭代器属性Symbol.Iterator,可以使用for...of或者扩展操作符等方法来遍历属性
+
+```TypeScript
+const int16 = new Int16Array([1, 1, 4, 5, 1, 4]);
+
+for (const element of int16) {
+  console.log('[debug] ', element); // 1 1 4 5 1 4
+}
+
+console.log('[debug] Math.max(...int16)', Math.max(...int16)); //5
+
+for (const key in int16) {
+  console.log('[debug] ', key); //0 1 2 3 4 5
+}
+```
+
+#### 合并、复制和修改定型数组
++ 定型数组同样使用数组缓冲来存储数据，而数组缓冲无法调整大小。因此，下列方法不适用于定型数组：
+  + concat()
+  + pop()
+  + push()
+  + shift()
+  + splice()
+  + unshift()
+
++ 定型数组也提供了两个新方法，可以快速向外或向内复制数据：set()和 subarray()。
++ [`set`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set)从提供的数组或定型数组中把值复制到当前定型数组中指定的索引位置：
+
+```TypeScript
+//  set用于原有的改变定型数组
+const uint32From = Uint32Array.from('13579');
+console.log('[debug] Uint32Array.from("13579")', uint32From); //1 3 5 7 9
+uint32From.set([1, 2, 3, 4]);
+// set的默认targetOffset 偏移量为0
+console.log('[debug] uint32From', uint32From); // 1 2 3 4 9
+
+// 溢出会造成边界错误
+// uint32From.set(Uint16Array.of(1, 2, 3), 4); //ArrayBuffer.ts:211 Uncaught RangeError: offset is out of bounds
+```
+
++ subarray()执行与 set()相反的操作，它会基于从原始定型数组中复制的值返回一个新定型数组。复制值时的开始索引和结束索引是可选的：
+
+```TypeScript
+// subArray方法基于原来的定型数组来创建一个新的定型数组
+const source = Uint32Array.of(1, 2, 3, 4, 5, 6);
+const fullCopy = source.subarray(); // 不加索引复制全部 1 2 3 4 5 6
+const startCopy = source.subarray(1); //从第二个元素开始复制 2 3 4 5 6
+const partCopy = source.subarray(1, 3); //从第2个元素开始复制到第4个元素结束 2 3 4
+console.log('[debug] ', source === fullCopy, fullCopy, startCopy, partCopy);
+```
+
++ 除了特殊的夹板类型：Uint8ClampedArray则不允许溢出 超出最大值 255 的值会被向下舍入为 255，而小于最小值 0 的值会被向上舍入为 0。其他类型的TypedArray在上溢和下溢时都是根据最大位数进行取模运算.或者说转换为补码运算
+
+```TypeScript
+// 长度为 2 的有符号整数数组
+// 每个索引保存一个二补数形式的有符号整数
+// 范围是-128（-1 * 2^7）~127（2^7 - 1）
+const ints = new Int8Array(2);
+
+// 长度为 2 的无符号整数数组
+// 每个索引保存一个无符号整数
+// 范围是 0~255（2^7 - 1）
+const unsignedInts = new Uint8Array(2);
+
+// 上溢的位不会影响相邻索引
+// 索引只会取最低有效位上的8位
+const num = 114514;
+console.log(
+  '===============================>[debug] ',
+  num.toString(2),
+  num.toString(16),
+  (0b01010010).toString(10),
+); //11011111101010010 1bf52 82
+unsignedInts[0] = num; // 0x100
+console.log('[debug] unsignedInts', unsignedInts);
+[82, 0];
+
+// 下溢的位会被转换为其无符号的等价值
+// 计算机中负数需要用补码表示
+// 0xFF 是以二补数形式表示的-1（截取到 8 位）,
+//  -1的有效位用补码表示即1 => 0000 00001 =>取反得到反码 1111 1110 => 反码+1得到补码 1111 1111 用16进制即为 0xFF,其实就是
+
+// 但 255 是一个无符号整数
+unsignedInts[1] = -1; // 0xFF (truncated to 8 bits)
+console.log(unsignedInts); // [0, 255]
+
+unsignedInts[1] = -2; // 0000 0010 => 取反 1111 1101 => 补码 1111 1110 用16进制表示为0xFE
+console.log(unsignedInts); // [0, 254]
+
+// 上溢自动变成二补数形式
+// 0x80 是无符号整数的 128，是二补数形式的-128
+ints[0] = 128; //0x 1000 0000 => 取反 0x 1111 1111 => 补码 1 1000 0000=>-128
+console.log(ints); // [-128,0]
+
+//
+ints[1] = -129; // 0x 1 1000 0001=>取反 0111 1110=>补码 0111 1111=> 127
+console.log('[debug] ', ints); //[-128, 127];
+
+// 除了特殊的夹板类型：Uint8ClampedArray则不允许溢出 超出最大值 255 的值会被向下舍入为 255，而小于最小值 0 的值会被向上舍入为 0。
+
+const clamped = Uint8ClampedArray.of(288, -1000);
+console.log('[debug] ', clamped); // [255,0]
+```
+
