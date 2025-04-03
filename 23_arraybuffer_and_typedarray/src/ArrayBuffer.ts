@@ -268,3 +268,13 @@ console.log('[debug] ', ints); //[-128, 127];
 
 const clamped = Uint8ClampedArray.of(288, -1000);
 console.log('[debug] ', clamped); // [255,0]
+
+// 附加
+// 1.能不能将string转为ArrayBufffer来读取
+const foo = '114514';
+const str_view = Uint8Array.from('我是ABCDEFG'); // 这样是转换不了的,需要使用TextEncoder来转换
+console.log('[debug] 字符串转为ArrayBuffer', str_view);
+
+const encoder = new TextEncoder();
+const view_str = encoder.encode('我是ABCDEFG');
+console.log('[debug] ', view_str);

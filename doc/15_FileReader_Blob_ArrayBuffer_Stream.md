@@ -47,3 +47,8 @@
 
 >如果是直接想把图片用canvas来展示,可以用canvas的[`drawImage`](https://developer.mozilla.org/zh-CN/docs/Web/API/CanvasRenderingContext2D/drawImage)方法就行,上面的目的主要是**通过操纵内存来改变图像,而不是变成canvas再进行图像变更**
 
+
+#### TextDecoder 和 TextEncoder
++ TextDecoder将二进制转为文本
+  + `new TextDecoder([utfLabel,options])`,utfLabel默认为utf-8,可以是[任意有效的编码字符](https://developer.mozilla.org/zh-CN/docs/Web/API/Encoding_API/Encodings),options是具有属性的对象,包含属性fatal:boolean,默认为true,在解码无效时会抛出TypeError错误,设置为false则不抛出错误
++ TextEncoder将文本转为二进制
