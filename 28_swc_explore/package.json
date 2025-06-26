@@ -1,16 +1,17 @@
 {
-  "name": "13_decorator",
+  "name": "28_swc_explore",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx index.ts",
-    "test": "tsx require.ts"
+    "swc": "swc ./index.ts -o index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "packageManager": "pnpm@10.4.1",
   "dependencies": {
-    "reflect-metadata": "^0.2.2"
+    "@swc/cli": "^0.6.0",
+    "@swc/core": "^1.10.7"
   }
 }
