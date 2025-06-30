@@ -7,11 +7,11 @@ interface UploadProgressProps {
   fileUrl?: string;
 }
 
-const UploadProgress: React.FC<UploadProgressProps> = ({ 
-  progress, 
-  status, 
+const UploadProgress: React.FC<UploadProgressProps> = ({
+  progress,
+  status,
   filename,
-  fileUrl 
+  fileUrl,
 }) => {
   return (
     <div className="upload-progress">
@@ -19,15 +19,12 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
         <span className="filename">{filename}</span>
         <span className="status">{status}</span>
       </div>
-      
+
       <div className="progress-container">
-        <div 
-          className="progress-bar" 
-          style={{ width: `${progress}%` }}
-        />
+        <div className="progress-bar" style={{ width: `${progress}%` }} />
         <span className="progress-text">{Math.round(progress)}%</span>
       </div>
-      
+
       {fileUrl && (
         <div className="file-url">
           <a href={fileUrl} target="_blank" rel="noopener noreferrer">

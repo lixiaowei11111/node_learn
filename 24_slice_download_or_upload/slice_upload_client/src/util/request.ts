@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'localhost:3000';
+const BASE_URL = '/api/upload';
 
 const request = axios.create({
   baseURL: BASE_URL,

@@ -1,76 +1,178 @@
+import SparkMD5 from 'spark-md5';
+import { Map2Enum } from './types';
+import request from './request';
+
+interface AxiosResponseType<T> {
+  code: number;
+  message?: string;
+  data: T;
+}
+
 interface UploadChunkParams {
   file: File;
   chunkSize: number;
   chunkIndex: number;
   fileHash: string;
   filename: string;
+  chunkHash?: string;
   onProgress?: (progress: number) => void;
 }
 
 interface MergeChunksParams {
   fileHash: string;
   filename: string;
-  size: number;
-  chunkSize: number;
 }
 
 interface VerifyChunkParams {
   fileHash: string;
-  chunkIndex: number;
+  chunkHash?: string;
+}
+
+const verifyStatusMap = {
+  /** 已完全上传 */
+  SUCCESS: 'success',
+  /** 上传了一部分 */
+  PENDING: 'pending',
+  /** 分片已上传,但是未合并 */
+  READY: 'ready',
+  /** 部分上传 */
+  PARTIAL: 'partial',
+} as const;
+
+type VerifyStatusEnum = Map2Enum<typeof verifyStatusMap>;
+
+interface VerifyResponseType {
+  status: VerifyStatusEnum;
+  uploadedChunkIndexes: number[];
+  url?: string;
+}
+
+interface MergeResponseType {
+  url: string;
+}
+
+interface RequestVerifyType {
+  fileHash: string;
+  filename: string;
+  fileSize: number;
+  chunkSize: number;
+  chunkTotal: number;
+  fileType?: string;
 }
 
 // 默认分片大小 5MB
-const DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024;
-const API_BASE_URL = '';
+const DEFAULT_CHUNK_SIZE = 2 * 1024 * 1024;
 
-// 计算文件的哈希值
-export const calculateFileHash = (file: File): Promise<string> => {
-  return new Promise((resolve) => {
-    // 在实际应用中，使用更完整的哈希算法
-    // 这里使用文件的名称、大小和最后修改时间的组合作为简单的哈希
-    const hashValue = `${file.name}-${file.size}-${file.lastModified}`;
-    resolve(hashValue);
+interface ChunkType {
+  chunk: Blob;
+  hash: string;
+}
+
+export const processFile = (
+  file: File,
+  chunkSize: number = DEFAULT_CHUNK_SIZE,
+): Promise<{
+  fileHash: string;
+  chunks: ChunkType[];
+}> => {
+  return new Promise((resolve, reject) => {
+    // 用于计算整个文件的哈希值
+    const fileSpark = new SparkMD5.ArrayBuffer();
+    // 用于存储每个分块的信息
+    const chunks: { chunk: Blob; hash: string }[] = [];
+    // 预先创建所有的分块
+    let cur = 0;
+    while (cur < file.size) {
+      chunks.push({
+        chunk: file.slice(cur, cur + chunkSize),
+        hash: '', // 先初始化为空，后面计算
+      });
+      cur += chunkSize;
+    }
+
+    const fileReader = new FileReader();
+    let currentChunk = 0;
+    const totalChunks = chunks.length;
+
+    fileReader.onload = async (e) => {
+      if (e.target?.result) {
+        const arrayBuffer = e.target.result as ArrayBuffer;
+
+        // 添加到整个文件的哈希计算
+        fileSpark.append(arrayBuffer);
+
+        // 计算当前分块的哈希
+        const chunkSpark = new SparkMD5.ArrayBuffer();
+        chunkSpark.append(arrayBuffer);
+        chunks[currentChunk].hash = chunkSpark.end();
+
+        currentChunk++;
+
+        if (currentChunk < totalChunks) {
+          // 继续读取下一个分块
+          loadNext();
+        } else {
+          // 完成所有分块读取和哈希计算
+          resolve({
+            fileHash: fileSpark.end(),
+            chunks,
+          });
+        }
+      }
+    };
+
+    fileReader.onerror = (e) => {
+      reject(new Error('文件读取失败：' + e.target?.error?.message));
+    };
+    function loadNext() {
+      fileReader.readAsArrayBuffer(chunks[currentChunk].chunk);
+    }
+
+    // 开始读取第一个分块
+    if (chunks.length > 0) {
+      loadNext();
+    } else {
+      // 文件为空的情况
+      resolve({
+        fileHash: new SparkMD5.ArrayBuffer().end(),
+        chunks: [],
+      });
+    }
   });
 };
 
-// 将文件分割成多个块
-export const createFileChunks = (
-  file: File,
-  chunkSize: number = DEFAULT_CHUNK_SIZE,
-): Blob[] => {
-  const chunks: Blob[] = [];
-  let cur = 0;
-
-  while (cur < file.size) {
-    chunks.push(file.slice(cur, cur + chunkSize));
-    cur += chunkSize;
-  }
-
-  return chunks;
-};
-
-// 验证分片是否已上传
+// 验证文件上传状态，返回已上传的分片信息
 export const verifyChunk = async ({
   fileHash,
-  chunkIndex,
-}: VerifyChunkParams): Promise<boolean> => {
+  file,
+  chunkSize,
+}: VerifyChunkParams & {
+  file: File;
+  chunkSize: number;
+}): Promise<VerifyResponseType | void> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/upload/verify-chunk`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fileHash,
-        chunkIndex,
-      }),
-    });
+    // 计算总分片数
+    const chunkTotal = Math.ceil(file.size / chunkSize);
 
-    const result = await response.json();
-    return result.exists || false;
+    const params: RequestVerifyType = {
+      fileHash,
+      filename: file.name,
+      fileSize: file.size,
+      chunkSize,
+      chunkTotal,
+      fileType: file.type || '',
+    };
+
+    const response = await request.post<AxiosResponseType<VerifyResponseType>>(
+      '/verify',
+      params,
+    );
+    console.log('[debug] response', response);
+    // 根据后端返回的数据结构直接返回结果
+    return response.data.data;
   } catch (error) {
-    console.error('验证分片失败:', error);
-    return false;
+    console.error('验证文件上传状态失败:', error);
+    throw error;
   }
 };
 
@@ -82,51 +184,61 @@ export const uploadChunk = async ({
   fileHash,
   filename,
   onProgress,
-}: UploadChunkParams): Promise<boolean> => {
+}: UploadChunkParams & { chunkHash?: string }): Promise<boolean> => {
   const chunk = file.slice(
     chunkIndex * chunkSize,
     (chunkIndex + 1) * chunkSize,
   );
-  const formData = new FormData();
 
+  // 计算总分片数
+  const chunkTotal = Math.ceil(file.size / chunkSize);
+
+  // 创建一个FormData用于文件上传
+  const formData = new FormData();
   formData.append('file', chunk);
   formData.append('fileHash', fileHash);
-  formData.append('chunkIndex', String(chunkIndex));
   formData.append('filename', filename);
-  formData.append('chunkSize', String(chunkSize));
-  formData.append('totalSize', String(file.size));
+  formData.append('chunkIndex', chunkIndex.toString());
+  formData.append('chunkTotal', chunkTotal.toString());
+  formData.append('chunkSize', chunkSize.toString());
+  formData.append('fileSize', file.size.toString());
+  formData.append('fileType', file.type || '');
 
+  // 实际发送请求
   try {
-    const xhr = new XMLHttpRequest();
+    // 如果需要进度报告，使用axios的onUploadProgress
+    if (onProgress) {
+      const response = await request.post<
+        AxiosResponseType<{
+          chunkIndex: number;
+          uploadedCount: number;
+          chunkTotal: number;
+        }>
+      >('/chunk', formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentComplete =
+              (progressEvent.loaded / progressEvent.total) * 100;
+            onProgress(percentComplete);
+          }
+        },
+      });
 
-    // 使用 Promise 包装 XHR 请求，以便跟踪上传进度
-    return new Promise((resolve, reject) => {
-      xhr.open('POST', `${API_BASE_URL}/api/upload/chunk`, true);
+      return response.status === 201;
+    } else {
+      // 如果不需要进度报告
+      const response = await request.post<
+        AxiosResponseType<{
+          chunkIndex: number;
+          uploadedCount: number;
+          chunkTotal: number;
+        }>
+      >('/chunk', formData);
 
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && onProgress) {
-          // 计算单个分片的上传进度
-          const chunkProgress = (e.loaded / e.total) * 100;
-          onProgress(chunkProgress);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(true);
-        } else {
-          reject(new Error(`上传失败：HTTP状态码 ${xhr.status}`));
-        }
-      };
-
-      xhr.onerror = () => {
-        reject(new Error('网络错误'));
-      };
-
-      xhr.send(formData);
-    });
+      return response.status === 201;
+    }
   } catch (error) {
-    console.error(`分片 ${chunkIndex} 上传失败:`, error);
+    console.error(`上传分片${chunkIndex}失败:`, error);
     return false;
   }
 };
@@ -135,25 +247,17 @@ export const uploadChunk = async ({
 export const mergeChunks = async ({
   fileHash,
   filename,
-  size,
-  chunkSize,
 }: MergeChunksParams): Promise<string> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/upload/merge`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const response = await request.post<AxiosResponseType<MergeResponseType>>(
+      '/merge',
+      {
         fileHash,
         filename,
-        size,
-        chunkSize,
-      }),
-    });
+      },
+    );
 
-    const result = await response.json();
-    return result.url || '';
+    return response.data.data.url || '';
   } catch (error) {
     console.error('合并分片失败:', error);
     throw error;
@@ -170,35 +274,52 @@ export const uploadFile = async (
 ): Promise<void> => {
   try {
     // 1. 计算文件哈希
-    const fileHash = await calculateFileHash(file);
+    const { fileHash, chunks } = await processFile(file, chunkSize);
     const filename = file.name;
 
-    // 2. 创建文件分片
-    const chunks = createFileChunks(file, chunkSize);
+    console.log('[debug] fileHash:', fileHash);
+    console.log('[debug] chunks:', chunks);
     const totalChunks = chunks.length;
-    const uploadedChunks: boolean[] = Array(totalChunks).fill(false);
 
-    // 3. 验证已上传的分片
-    for (let i = 0; i < totalChunks; i++) {
-      const exists = await verifyChunk({ fileHash, chunkIndex: i });
-      uploadedChunks[i] = exists;
+    // 3. 一次性验证文件hash
+    const verifyResult = await verifyChunk({
+      fileHash,
+      file,
+      chunkSize,
+    });
+
+    // 已经上传了的分片索引
+    const uploadedChunkIndexes: boolean[] = Array(totalChunks).fill(false);
+
+    if (
+      verifyResult?.status === verifyStatusMap.SUCCESS ||
+      verifyResult?.status === verifyStatusMap.READY
+    ) {
+      // 文件已完全上传，文件上传完成但是并未合并
+      uploadedChunkIndexes.fill(true);
+    } else if (verifyResult?.status === verifyStatusMap.PARTIAL) {
+      // 上传部分
+      verifyResult.uploadedChunkIndexes.forEach((index: number) => {
+        uploadedChunkIndexes[index] = true;
+      });
     }
 
     // 计算已经上传的进度
-    const alreadyUploadedChunks = uploadedChunks.filter(Boolean).length;
+    const alreadyUploadedChunks = uploadedChunkIndexes.filter(Boolean).length;
     let uploadedProgress = (alreadyUploadedChunks / totalChunks) * 100;
 
     if (onProgress) {
       onProgress(uploadedProgress);
     }
 
-    // 如果所有分片都已上传，则直接请求合并
-    if (alreadyUploadedChunks === totalChunks) {
+    // 如果所有分片都已上传但是未合并，则直接请求合并
+    if (
+      alreadyUploadedChunks === totalChunks &&
+      verifyResult?.status === verifyStatusMap.READY
+    ) {
       const url = await mergeChunks({
         fileHash,
         filename,
-        size: file.size,
-        chunkSize,
       });
 
       if (onSuccess) {
@@ -208,11 +329,11 @@ export const uploadFile = async (
       return;
     }
 
-    // 4. 上传未上传的分片
+    // 4. 如果上传了部分,则上传未上传的分片
     const uploadTasks: Promise<boolean>[] = [];
 
     for (let i = 0; i < totalChunks; i++) {
-      if (!uploadedChunks[i]) {
+      if (!uploadedChunkIndexes[i]) {
         const task = uploadChunk({
           file,
           chunkSize,
@@ -238,6 +359,7 @@ export const uploadFile = async (
 
     // 等待所有分片上传完成
     const results = await Promise.all(uploadTasks);
+    console.log('[debug] results', results);
 
     // 检查是否所有分片都上传成功
     if (results.every(Boolean)) {
@@ -245,8 +367,6 @@ export const uploadFile = async (
       const url = await mergeChunks({
         fileHash,
         filename,
-        size: file.size,
-        chunkSize,
       });
 
       // 6. 上传完成，更新进度为100%

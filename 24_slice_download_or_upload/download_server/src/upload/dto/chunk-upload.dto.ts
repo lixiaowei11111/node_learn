@@ -6,10 +6,10 @@ import { z } from 'zod';
 export const ChunkUploadSchema = z.object({
   fileHash: z.string().min(1, '文件哈希不能为空'), // 文件的唯一标识（通常是MD5值）
   filename: z.string().min(1, '文件名不能为空'), // 原始文件名
-  chunkIndex: z.number().int().min(0, '分片索引必须为非负整数'), // 当前分片索引
-  chunkTotal: z.number().int().positive('分片总数必须为正整数'), // 分片总数
-  chunkSize: z.number().int().positive('分片大小必须为正整数'), // 分片大小（字节）
-  fileSize: z.number().int().positive('文件大小必须为正整数'), // 文件总大小（字节）
+  chunkIndex: z.coerce.number().int().min(0, '分片索引必须为非负整数'), // 自动将字符串转换为数字
+  chunkTotal: z.coerce.number().int().positive('分片总数必须为正整数'), // 自动将字符串转换为数字
+  chunkSize: z.coerce.number().int().positive('分片大小必须为正整数'), // 自动将字符串转换为数字
+  fileSize: z.coerce.number().int().positive('文件大小必须为正整数'), // 自动将字符串转换为数字
   fileType: z.string().optional(), // 文件类型，可选
 });
 // 导出类型

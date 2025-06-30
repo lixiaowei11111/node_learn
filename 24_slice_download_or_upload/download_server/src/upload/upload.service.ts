@@ -6,9 +6,11 @@ import {
 import { ChunkUploadDto } from './dto/chunk-upload.dto';
 import { VerifyChunkDto } from './dto/verify-chunk.dto';
 import { MergeChunksDto } from './dto/merge-chunks.dto';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import * as path from 'path';
 import { Response } from 'express';
+
+const originHost = 'http://127.0.0.1:3210';
 
 @Injectable()
 export class UploadService {
@@ -28,60 +30,70 @@ export class UploadService {
 
   // 验证文件上传状态
   async verifyUpload(verifyChunkDto: VerifyChunkDto) {
-    const { fileHash, filename, chunkTotal } = verifyChunkDto;
-    const filePath = path.join(this.filesDir, `${fileHash}-${filename}`);
+    try {
+      const { fileHash, filename, chunkTotal } = verifyChunkDto;
+      // 文件路径
+      const filePath = path.join(this.filesDir, `${fileHash}-${filename}`);
 
-    // 检查文件是否已经存在（已完全上传）
-    const fileExists = await fs.pathExists(filePath);
-    if (fileExists) {
+      // 检查文件是否已经存在（已完全上传）
+      const fileExists = await fs.pathExists(filePath);
+      if (fileExists) {
+        return {
+          code: 1000,
+          data: {
+            status: 'success',
+            uploadedChunkIndexes: [],
+            url: `${originHost}/upload/download/${fileHash}?filename=${encodeURIComponent(filename)}`,
+          },
+        };
+      }
+
+      // 检查是否有部分分片已上传
+
+      // 分片路径
+      const chunkDir = path.join(this.chunksDir, fileHash);
+      const chunkDirExists = await fs.pathExists(chunkDir);
+
+      if (!chunkDirExists) {
+        // 没有任何分片，需要从头开始上传
+        return {
+          code: 1001,
+          data: {
+            status: 'pending',
+            uploadedChunkIndexes: [],
+          },
+        };
+      }
+
+      // 获取已上传的分片列表
+      const files = await fs.readdir(chunkDir);
+      const uploadedChunkIndexes = files.map((filename) =>
+        parseInt(filename, 10),
+      );
+
+      // 检查是否所有分片都已经上传
+      if (uploadedChunkIndexes.length === chunkTotal) {
+        return {
+          code: 1002,
+          data: {
+            status: 'ready',
+            uploadedChunkIndexes,
+          },
+        };
+      }
+
+      // 部分分片已上传，返回已上传的分片信息
       return {
-        code: 0,
+        code: 1003,
         data: {
-          status: 'success',
-          uploadedChunks: [],
-          url: `/upload/download/${fileHash}?filename=${encodeURIComponent(filename)}`,
+          status: 'partial',
+          uploadedChunkIndexes,
         },
       };
+    } catch (error) {
+      console.log('[debug] error', error);
+      throw new BadRequestException('Failed to verify upload status');
     }
-
-    // 检查是否有部分分片已上传
-    const chunkDir = path.join(this.chunksDir, fileHash);
-    const chunkDirExists = await fs.pathExists(chunkDir);
-
-    if (!chunkDirExists) {
-      // 没有任何分片，需要从头开始上传
-      return {
-        code: 1,
-        data: {
-          status: 'pending',
-          uploadedChunks: [],
-        },
-      };
-    }
-
-    // 获取已上传的分片列表
-    const files = await fs.readdir(chunkDir);
-    const uploadedChunks = files.map((filename) => parseInt(filename, 10));
-
-    // 检查是否所有分片都已经上传
-    if (uploadedChunks.length === chunkTotal) {
-      return {
-        code: 2,
-        data: {
-          status: 'ready',
-          uploadedChunks,
-        },
-      };
-    }
-
-    // 部分分片已上传，返回已上传的分片信息
-    return {
-      code: 3,
-      data: {
-        status: 'partial',
-        uploadedChunks,
-      },
-    };
   }
 
   // 保存分片
@@ -118,37 +130,47 @@ export class UploadService {
       throw new BadRequestException('Chunk file upload failed');
     }
 
-    // 返回成功响应
-    return {
-      code: 0,
-      message: `Chunk ${chunkIndex} uploaded successfully`,
-      data: {
-        chunkIndex,
-        uploadedCount: (await fs.readdir(chunkDir)).length,
-        chunkTotal,
-      },
-    };
+    try {
+      // 将临时文件移动到最终位置
+      await fs.move(file.path, chunkPath, { overwrite: false });
+
+      // 返回成功响应
+      return {
+        code: 0,
+        message: `Chunk ${chunkIndex} uploaded successfully`,
+        data: {
+          chunkIndex,
+          uploadedCount: (await fs.readdir(chunkDir)).length,
+          chunkTotal,
+        },
+      };
+    } catch (error) {
+      console.error(`Error saving chunk ${chunkIndex}:`, error);
+      throw new BadRequestException(`Failed to save chunk ${chunkIndex}`);
+    }
   }
 
   // 合并分片
   async mergeChunks(mergeChunksDto: MergeChunksDto) {
     const { fileHash, filename } = mergeChunksDto;
-    const chunkDir = path.join(this.chunksDir, fileHash);
+    // 文件路径
     const filePath = path.join(this.filesDir, `${fileHash}-${filename}`);
 
-    // 检查是否已经合并
+    // 1. 检查文件是否已经合并
     const fileExists = await fs.pathExists(filePath);
     if (fileExists) {
       return {
         code: 0,
         message: 'File already merged',
         data: {
-          url: `/upload/download/${fileHash}?filename=${encodeURIComponent(filename)}`,
+          url: `${originHost}/upload/download/${fileHash}?filename=${encodeURIComponent(filename)}`,
         },
       };
     }
 
     // 检查分片目录是否存在
+    // 分片路径
+    const chunkDir = path.join(this.chunksDir, fileHash);
     const chunkDirExists = await fs.pathExists(chunkDir);
     if (!chunkDirExists) {
       throw new NotFoundException('No chunks found for this file');

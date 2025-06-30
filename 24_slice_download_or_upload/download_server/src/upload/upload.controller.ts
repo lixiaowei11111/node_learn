@@ -18,6 +18,7 @@ import { VerifyChunkDto, VerifyChunkSchema } from './dto/verify-chunk.dto';
 import { MergeChunksDto, MergeChunksSchema } from './dto/merge-chunks.dto';
 import { diskStorage } from 'multer';
 import * as path from 'path';
+import fs from 'fs-extra';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 
 @Controller('upload')
@@ -37,19 +38,22 @@ export class UploadController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const { fileHash } = req.body as ChunkUploadDto;
-          const chunkDir = path.join(process.cwd(), 'uploads/chunks', fileHash);
-          // 目录创建由service处理
-          cb(null, chunkDir);
+          // 使用临时目录，避免依赖req.body
+          const tempDir = path.join(process.cwd(), 'uploads/temp');
+          // 确保目录存在
+          fs.mkdirSync(tempDir, { recursive: true });
+          cb(null, tempDir);
         },
         filename: (req, file, cb) => {
-          const { chunkIndex } = req.body as ChunkUploadDto;
-          cb(null, `${chunkIndex}`);
+          // 生成唯一的临时文件名
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `temp-${uniqueSuffix}`);
         },
       }),
     }),
   )
-  uploadChunk(
+  async uploadChunk(
     @UploadedFile() file: Express.Multer.File,
     @Body(new ZodValidationPipe(ChunkUploadSchema))
     chunkUploadDto: ChunkUploadDto,
