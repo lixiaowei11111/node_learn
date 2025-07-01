@@ -14,7 +14,7 @@ const originHost = 'http://127.0.0.1:3210';
 
 @Injectable()
 export class UploadService {
-  private readonly uploadDir = path.join(process.cwd(), 'uploads');
+  private readonly uploadDir = path.join(process.cwd(), 'resources');
   private readonly chunksDir = path.join(this.uploadDir, 'chunks');
   private readonly filesDir = path.join(this.uploadDir, 'files');
 
