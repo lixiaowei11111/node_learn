@@ -39,7 +39,7 @@ export class UploadController {
       storage: diskStorage({
         destination: (req, file, cb) => {
           // 使用临时目录，避免依赖req.body
-          const tempDir = path.join(process.cwd(), 'uploads/temp');
+          const tempDir = path.join(process.cwd(), 'resources/temp');
           // 确保目录存在
           fs.mkdirSync(tempDir, { recursive: true });
           cb(null, tempDir);

@@ -10,7 +10,7 @@ interface AxiosResponseType<T> {
 }
 
 // 任务状态枚举
-export const TaskStatusMap = {
+export const taskStatusMap = {
   PENDING: 'pending', // 等待中
   PROCESSING: 'processing', // 处理中
   PAUSED: 'paused', // 已暂停
@@ -18,10 +18,18 @@ export const TaskStatusMap = {
   ERROR: 'error', // 错误
 } as const;
 
-export type TaskStatus = Map2Enum<typeof TaskStatusMap>;
+export const taskStatusTextMap = {
+  [taskStatusMap.PENDING]: '等待上传',
+  [taskStatusMap.PROCESSING]: '上传中',
+  [taskStatusMap.PAUSED]: '已暂停',
+  [taskStatusMap.COMPLETED]: '上传完成',
+  [taskStatusMap.ERROR]: '上传失败',
+};
+
+export type TaskStatus = Map2Enum<typeof taskStatusMap>;
 
 // 默认分片大小 2MB
-const DEFAULT_CHUNK_SIZE = 2 * 1024 * 1024;
+const DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024;
 
 interface ChunkType {
   chunk: Blob;
@@ -196,6 +204,7 @@ export const verifyChunk = async ({
       '/verify',
       params,
     );
+    console.log('[debug] 验证文件完成', response);
     // 根据后端返回的数据结构直接返回结果
     return response.data.data;
   } catch (error) {
@@ -305,6 +314,13 @@ export const mergeChunks = async ({
   }
 };
 
+interface UploadQueueCbType {
+  onProgress?: (taskId: string, progress: number) => void;
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
+  onComplete?: (taskId: string, url: string) => void;
+  onError?: (taskId: string, error: Error) => void;
+}
+
 // 上传队列类，管理上传任务
 export class UploadQueue {
   private tasks: Map<string, UploadTask> = new Map();
@@ -322,7 +338,6 @@ export class UploadQueue {
 
   constructor(concurrentLimit: number = 1) {
     this.concurrentLimit = concurrentLimit;
-
     // 尝试从本地存储恢复上传任务
     this.restoreTasksFromStorage();
   }
@@ -333,16 +348,48 @@ export class UploadQueue {
     onStatusChange,
     onComplete,
     onError,
-  }: {
-    onProgress?: (taskId: string, progress: number) => void;
-    onStatusChange?: (taskId: string, status: TaskStatus) => void;
-    onComplete?: (taskId: string, url: string) => void;
-    onError?: (taskId: string, error: Error) => void;
-  }) {
+  }: UploadQueueCbType) {
     this.onTaskProgressCallback = onProgress;
     this.onTaskStatusChangeCallback = onStatusChange;
     this.onTaskCompleteCallback = onComplete;
     this.onTaskErrorCallback = onError;
+  }
+
+  // 删除任务
+  public removeTask(taskId: string): boolean {
+    const task = this.tasks.get(taskId);
+    if (!task) return false;
+
+    // 如果任务正在处理中，先中断上传
+    if (task.status === taskStatusMap.PROCESSING && task.abortController) {
+      task.abortController.abort();
+    }
+
+    // 从队列中移除任务
+    this.tasks.delete(taskId);
+
+    // 保存任务状态
+    this.saveTasksToStorage();
+
+    // 尝试处理队列
+    this.processQueue();
+
+    return true;
+  }
+
+  // 获取任务状态
+  public getTaskStatus(taskId: string): TaskStatus | undefined {
+    return this.tasks.get(taskId)?.status;
+  }
+
+  // 获取任务进度
+  public getTaskProgress(taskId: string): number {
+    return this.tasks.get(taskId)?.progress || 0;
+  }
+
+  // 获取所有任务
+  public getAllTasks(): UploadTask[] {
+    return Array.from(this.tasks.values());
   }
 
   // 添加上传任务
@@ -352,6 +399,13 @@ export class UploadQueue {
   ): Promise<string> {
     // 处理文件，计算哈希并分块
     const { fileHash, chunks } = await processFile(file, chunkSize);
+    console.log(
+      '[debug] 文件分片完成',
+      fileHash,
+      chunks,
+      this.tasks,
+      this.tasks.has(fileHash),
+    );
     const taskId = fileHash;
 
     // 检查是否已存在相同的任务
@@ -368,7 +422,7 @@ export class UploadQueue {
       chunks,
       uploadedChunks: Array(chunks.length).fill(false),
       currentChunkIndex: 0,
-      status: TaskStatusMap.PENDING,
+      status: taskStatusMap.PENDING,
       progress: 0,
     };
 
@@ -385,18 +439,18 @@ export class UploadQueue {
         verifyResult?.status === verifyStatusMap.SUCCESS ||
         verifyResult?.status === verifyStatusMap.READY
       ) {
-        // 文件已完全上传，或分片上传完但未合并
+        // 文件已完全上传，或分片全部上传但是未合并
         task.uploadedChunks.fill(true);
         task.progress = 100;
 
         if (verifyResult.status === verifyStatusMap.SUCCESS) {
-          task.status = TaskStatusMap.COMPLETED;
+          task.status = taskStatusMap.COMPLETED;
           if (verifyResult.url && this.onTaskCompleteCallback) {
             this.onTaskCompleteCallback(taskId, verifyResult.url);
           }
         } else {
           // 已上传所有分片但未合并，需要继续处理
-          task.status = TaskStatusMap.PENDING;
+          task.status = taskStatusMap.PENDING;
         }
       } else if (verifyResult?.status === verifyStatusMap.PARTIAL) {
         // 部分上传
@@ -439,13 +493,13 @@ export class UploadQueue {
     if (!task) return false;
 
     // 如果任务正在处理中，则中断上传
-    if (task.status === TaskStatusMap.PROCESSING) {
+    if (task.status === taskStatusMap.PROCESSING) {
       if (task.abortController) {
         task.abortController.abort();
         task.abortController = undefined;
       }
 
-      task.status = TaskStatusMap.PAUSED;
+      task.status = taskStatusMap.PAUSED;
 
       // 触发状态变更回调
       if (this.onTaskStatusChangeCallback) {
@@ -459,9 +513,9 @@ export class UploadQueue {
       this.processQueue();
 
       return true;
-    } else if (task.status === TaskStatusMap.PENDING) {
+    } else if (task.status === taskStatusMap.PENDING) {
       // 如果任务还在等待，直接标记为暂停
-      task.status = TaskStatusMap.PAUSED;
+      task.status = taskStatusMap.PAUSED;
 
       // 触发状态变更回调
       if (this.onTaskStatusChangeCallback) {
@@ -480,10 +534,10 @@ export class UploadQueue {
   // 恢复任务
   public resumeTask(taskId: string): boolean {
     const task = this.tasks.get(taskId);
-    if (!task || task.status !== TaskStatusMap.PAUSED) return false;
+    if (!task || task.status !== taskStatusMap.PAUSED) return false;
 
     // 将任务状态设置为等待处理
-    task.status = TaskStatusMap.PENDING;
+    task.status = taskStatusMap.PENDING;
 
     // 触发状态变更回调
     if (this.onTaskStatusChangeCallback) {
@@ -499,43 +553,6 @@ export class UploadQueue {
     return true;
   }
 
-  // 删除任务
-  public removeTask(taskId: string): boolean {
-    const task = this.tasks.get(taskId);
-    if (!task) return false;
-
-    // 如果任务正在处理中，先中断上传
-    if (task.status === TaskStatusMap.PROCESSING && task.abortController) {
-      task.abortController.abort();
-    }
-
-    // 从队列中移除任务
-    this.tasks.delete(taskId);
-
-    // 保存任务状态
-    this.saveTasksToStorage();
-
-    // 尝试处理队列
-    this.processQueue();
-
-    return true;
-  }
-
-  // 获取任务状态
-  public getTaskStatus(taskId: string): TaskStatus | undefined {
-    return this.tasks.get(taskId)?.status;
-  }
-
-  // 获取任务进度
-  public getTaskProgress(taskId: string): number {
-    return this.tasks.get(taskId)?.progress || 0;
-  }
-
-  // 获取所有任务
-  public getAllTasks(): UploadTask[] {
-    return Array.from(this.tasks.values());
-  }
-
   // 处理上传队列
   private async processQueue() {
     // 如果已经在处理队列，则退出
@@ -546,7 +563,7 @@ export class UploadQueue {
     try {
       // 获取所有待处理的任务
       const pendingTasks = Array.from(this.tasks.values()).filter(
-        (task) => task.status === TaskStatusMap.PENDING,
+        (task) => task.status === taskStatusMap.PENDING,
       );
 
       // 如果没有待处理的任务，退出
@@ -573,7 +590,7 @@ export class UploadQueue {
   // 处理单个上传任务
   private async processTask(task: UploadTask) {
     // 更新任务状态
-    task.status = TaskStatusMap.PROCESSING;
+    task.status = taskStatusMap.PROCESSING;
 
     // 触发状态变更回调
     if (this.onTaskStatusChangeCallback) {
@@ -581,7 +598,7 @@ export class UploadQueue {
     }
 
     try {
-      // 如果所有分片都已上传，尝试合并
+      //1.  若所有分片都已上传，则尝试合并
       if (task.uploadedChunks.every(Boolean)) {
         // 请求合并分片
         const url = await mergeChunks({
@@ -590,7 +607,7 @@ export class UploadQueue {
         });
 
         // 更新任务状态
-        task.status = TaskStatusMap.COMPLETED;
+        task.status = taskStatusMap.COMPLETED;
         task.progress = 100;
 
         // 触发回调
@@ -612,10 +629,10 @@ export class UploadQueue {
         return;
       }
 
-      // 上传未上传的分片，顺序上传
+      // 2. 分片只上传了部分，则按照顺序继续上传未上传的分片
       while (task.currentChunkIndex < task.chunks.length) {
         // 检查任务是否被暂停
-        if (task.status !== TaskStatusMap.PROCESSING) {
+        if (task.status !== taskStatusMap.PROCESSING) {
           break;
         }
 
@@ -668,9 +685,9 @@ export class UploadQueue {
 
           // 移动到下一个分片
           task.currentChunkIndex++;
-        } else if (task.status === TaskStatusMap.PROCESSING) {
+        } else if (task.status === taskStatusMap.PROCESSING) {
           // 如果上传失败且不是由于暂停导致的，标记为错误
-          task.status = TaskStatusMap.ERROR;
+          task.status = taskStatusMap.ERROR;
           task.error = new Error(`分片 ${task.currentChunkIndex} 上传失败`);
 
           // 触发错误回调
@@ -692,9 +709,9 @@ export class UploadQueue {
         }
       }
 
-      // 检查是否所有分片都已上传
+      // 3. 上传以后，检查是否所有分片都已上传
       if (
-        task.status === TaskStatusMap.PROCESSING &&
+        task.status === taskStatusMap.PROCESSING &&
         task.uploadedChunks.every(Boolean)
       ) {
         // 请求合并分片
@@ -704,7 +721,7 @@ export class UploadQueue {
         });
 
         // 更新任务状态
-        task.status = TaskStatusMap.COMPLETED;
+        task.status = taskStatusMap.COMPLETED;
         task.progress = 100;
 
         // 触发回调
@@ -724,7 +741,7 @@ export class UploadQueue {
       console.error(`处理任务 ${task.id} 时出错:`, error);
 
       // 更新任务状态
-      task.status = TaskStatusMap.ERROR;
+      task.status = taskStatusMap.ERROR;
       task.error = error as Error;
 
       // 触发错误回调
@@ -780,7 +797,7 @@ export class UploadQueue {
           ...taskData,
           file: new File([], taskData.fileName), // 仅占位，需要用户重新选择文件
           chunks: [], // 占位，需要重新处理文件
-          status: TaskStatusMap.PAUSED, // 恢复时默认为暂停状态
+          status: taskStatusMap.PAUSED, // 恢复时默认为暂停状态
         } as UploadTask);
       }
     } catch (error) {
@@ -788,57 +805,6 @@ export class UploadQueue {
     }
   }
 }
-
-// 使用上传队列的上传文件函数
-export const uploadFileWithQueue = (
-  uploadQueue: UploadQueue,
-  file: File,
-  chunkSize: number = DEFAULT_CHUNK_SIZE,
-  onProgress?: (progress: number) => void,
-  onSuccess?: (url: string) => void,
-  onError?: (error: Error) => void,
-): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    uploadQueue
-      .addTask(file, chunkSize)
-      .then((taskId) => {
-        // 设置一次性回调
-        const onCompleteHandler = (completedTaskId: string, url: string) => {
-          if (completedTaskId === taskId) {
-            if (onSuccess) onSuccess(url);
-            resolve(url);
-          }
-        };
-
-        const onProgressHandler = (
-          progressTaskId: string,
-          progress: number,
-        ) => {
-          if (progressTaskId === taskId && onProgress) {
-            onProgress(progress);
-          }
-        };
-
-        const onErrorHandler = (errorTaskId: string, error: Error) => {
-          if (errorTaskId === taskId) {
-            if (onError) onError(error);
-            reject(error);
-          }
-        };
-
-        // 设置回调
-        uploadQueue.setCallbacks({
-          onProgress: onProgressHandler,
-          onComplete: onCompleteHandler,
-          onError: onErrorHandler,
-        });
-      })
-      .catch((error) => {
-        if (onError && error instanceof Error) onError(error);
-        reject(error);
-      });
-  });
-};
 
 // 全局上传队列实例
 export const globalUploadQueue = new UploadQueue();

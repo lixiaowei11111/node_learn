@@ -1,21 +1,40 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { globalUploadQueue, TaskStatusMap } from '../util/uploadQueue';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  globalUploadQueue,
+  taskStatusMap,
+  TaskStatus,
+} from '../util/uploadQueue';
 import UploadProgress from './UploadProgress';
 import { AxiosError } from 'axios';
 
 interface FileInfo {
   file: File;
   progress: number;
-  status: string;
+  status: TaskStatus;
   fileUrl?: string;
   taskId?: string; // 新增：关联上传任务ID
   isPaused?: boolean; // 新增：是否暂停状态
+  error?: unknown; //错误信息
 }
 
 const FileUploader: React.FC = () => {
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [uploading, setUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const checkAllFilesUploaded = useCallback(() => {
+    // 检查是否所有文件都已上传完成或失败
+    const allDone = files.every(
+      (file) =>
+        file.progress === 100 ||
+        file.status === taskStatusMap.ERROR ||
+        file.status === taskStatusMap.COMPLETED,
+    );
+
+    if (allDone) {
+      setUploading(false);
+    }
+  }, [files]);
 
   // 监听上传队列状态变化
   useEffect(() => {
@@ -36,29 +55,15 @@ const FileUploader: React.FC = () => {
         setFiles((prevFiles) => {
           return prevFiles.map((file) => {
             if (file.taskId === taskId) {
-              let statusText = '上传中';
+              let fileStatus: TaskStatus = taskStatusMap.PROCESSING;
               let isPaused = false;
 
-              switch (status) {
-                case TaskStatusMap.PENDING:
-                  statusText = '等待上传';
-                  break;
-                case TaskStatusMap.PROCESSING:
-                  statusText = '上传中';
-                  break;
-                case TaskStatusMap.PAUSED:
-                  statusText = '已暂停';
-                  isPaused = true;
-                  break;
-                case TaskStatusMap.COMPLETED:
-                  statusText = '上传完成';
-                  break;
-                case TaskStatusMap.ERROR:
-                  statusText = '上传失败';
-                  break;
+              fileStatus = status;
+              if (status === taskStatusMap.PAUSED) {
+                isPaused = true;
               }
 
-              return { ...file, status: statusText, isPaused };
+              return { ...file, status: fileStatus, isPaused };
             }
             return file;
           });
@@ -71,7 +76,7 @@ const FileUploader: React.FC = () => {
             if (file.taskId === taskId) {
               return {
                 ...file,
-                status: '上传完成',
+                status: taskStatusMap.COMPLETED,
                 progress: 100,
                 fileUrl: url,
               };
@@ -90,7 +95,8 @@ const FileUploader: React.FC = () => {
             if (file.taskId === taskId) {
               return {
                 ...file,
-                status: `上传失败: ${error.message}`,
+                status: taskStatusMap.ERROR,
+                error,
               };
             }
             return file;
@@ -98,28 +104,14 @@ const FileUploader: React.FC = () => {
         });
       },
     });
-  }, []);
-
-  const checkAllFilesUploaded = () => {
-    // 检查是否所有文件都已上传完成或失败
-    const allDone = files.every(
-      (file) =>
-        file.progress === 100 ||
-        file.status.includes('失败') ||
-        file.status === '上传完成',
-    );
-
-    if (allDone) {
-      setUploading(false);
-    }
-  };
+  }, [checkAllFilesUploaded]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles: FileInfo[] = Array.from(e.target.files).map((file) => ({
         file,
         progress: 0,
-        status: '等待上传',
+        status: taskStatusMap.PENDING,
       }));
 
       setFiles((prevFiles) => [...prevFiles, ...newFiles]);
@@ -146,15 +138,15 @@ const FileUploader: React.FC = () => {
           const status = globalUploadQueue.getTaskStatus(fileInfo.taskId);
 
           // 如果任务已暂停，恢复它
-          if (status === TaskStatusMap.PAUSED) {
+          if (status === taskStatusMap.PAUSED) {
             globalUploadQueue.resumeTask(fileInfo.taskId);
             continue;
           }
 
           // 如果任务已经完成或错误状态，跳过
           if (
-            status === TaskStatusMap.COMPLETED ||
-            status === TaskStatusMap.ERROR
+            status === taskStatusMap.COMPLETED ||
+            status === taskStatusMap.ERROR
           ) {
             continue;
           }
@@ -167,7 +159,7 @@ const FileUploader: React.FC = () => {
         setFiles((prevFiles) => {
           return prevFiles.map((file) => {
             if (file.file === fileInfo.file) {
-              return { ...file, taskId, status: '上传中' };
+              return { ...file, taskId, status: taskStatusMap.PROCESSING };
             }
             return file;
           });
@@ -179,7 +171,11 @@ const FileUploader: React.FC = () => {
         setFiles((prevFiles) => {
           return prevFiles.map((file) => {
             if (file.file === fileInfo.file && error instanceof AxiosError) {
-              return { ...file, status: `上传失败: ${error.message}` };
+              return {
+                ...file,
+                status: taskStatusMap.ERROR,
+                error: error.message,
+              };
             }
             return file;
           });

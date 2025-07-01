@@ -1,10 +1,15 @@
 import React from 'react';
 import './index.css';
+import {
+  TaskStatus,
+  taskStatusTextMap,
+  taskStatusMap,
+} from '../util/uploadQueue';
 
 interface UploadProgressProps {
   filename: string;
   progress: number;
-  status: string;
+  status: TaskStatus;
   fileUrl?: string;
 }
 
@@ -16,9 +21,9 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
 }) => {
   // 根据状态选择进度条颜色
   const getProgressBarColor = () => {
-    if (status.includes('失败')) return '#f44336'; // 失败 - 红色
-    if (status === '已暂停') return '#ff9800'; // 暂停 - 橙色
-    if (status === '上传完成') return '#4caf50'; // 完成 - 绿色
+    if (status === taskStatusMap.ERROR) return '#f44336'; // 失败 - 红色
+    if (status === taskStatusMap.PAUSED) return '#ff9800'; // 暂停 - 橙色
+    if (status === taskStatusMap.COMPLETED) return '#4caf50'; // 完成 - 绿色
     return '#2196f3'; // 默认 - 蓝色
   };
 
@@ -26,14 +31,14 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
     <div className="upload-progress">
       <div className="file-info">
         <div className="filename">
-          {filename}{' '}
+          {filename}&nbsp;
           {fileUrl && (
             <a href={fileUrl} target="_blank" rel="noreferrer">
               (查看)
             </a>
           )}
         </div>
-        <div className="status-text">{status}</div>
+        <div className="status-text">{taskStatusTextMap[status]}</div>
       </div>
       <div className="progress-container">
         <div
