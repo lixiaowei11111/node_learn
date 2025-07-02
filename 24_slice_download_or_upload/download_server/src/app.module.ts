@@ -8,7 +8,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 
 // 确保上传目录存在
-const uploadDir = path.join(process.cwd(), 'uploads');
+const uploadDir = path.join(process.cwd(), 'resources');
 fs.ensureDirSync(uploadDir);
 
 @Module({

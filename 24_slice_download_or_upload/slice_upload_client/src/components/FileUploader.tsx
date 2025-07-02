@@ -129,6 +129,7 @@ const FileUploader: React.FC = () => {
     const filesToUpload = files.filter(
       (file) => file.progress !== 100 && !file.isPaused,
     );
+    console.log('[debug] files', files, filesToUpload);
 
     // 依次添加到上传队列
     for (const fileInfo of filesToUpload) {
@@ -152,18 +153,30 @@ const FileUploader: React.FC = () => {
           }
         }
 
-        // 否则创建新的上传任务
+        // 创建/获取上传任务 (addTask内部会检查是否已存在相同哈希的任务)
         const taskId = await globalUploadQueue.addTask(fileInfo.file);
+        // 获取任务当前状态 (可能是新创建的任务或已存在的任务)
+        const task = globalUploadQueue.getTask(taskId);
 
         // 更新文件信息，关联上传任务ID
         setFiles((prevFiles) => {
           return prevFiles.map((file) => {
             if (file.file === fileInfo.file) {
-              return { ...file, taskId, status: taskStatusMap.PROCESSING };
+              return {
+                ...file,
+                taskId,
+                status: task?.status || taskStatusMap.PROCESSING,
+                progress: task?.progress || 0,
+              };
             }
             return file;
           });
         });
+
+        // 如果是已存在的暂停任务，恢复上传
+        if (task?.status === taskStatusMap.PAUSED) {
+          globalUploadQueue.resumeTask(taskId);
+        }
       } catch (error) {
         console.error('添加上传任务失败:', error);
 

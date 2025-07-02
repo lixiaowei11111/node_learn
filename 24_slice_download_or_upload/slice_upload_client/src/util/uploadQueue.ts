@@ -377,6 +377,11 @@ export class UploadQueue {
     return true;
   }
 
+  // 获取当前任务
+  public getTask(taskId: string): UploadTask | undefined {
+    return this.tasks.get(taskId);
+  }
+
   // 获取任务状态
   public getTaskStatus(taskId: string): TaskStatus | undefined {
     return this.tasks.get(taskId)?.status;
@@ -408,23 +413,27 @@ export class UploadQueue {
     );
     const taskId = fileHash;
 
+    let task: UploadTask;
+
     // 检查是否已存在相同的任务
     if (this.tasks.has(taskId)) {
-      return taskId;
+      task = this.tasks.get(taskId)!;
+    } else {
+      // 创建新任务
+      task = {
+        id: taskId,
+        file,
+        fileHash,
+        chunkSize,
+        chunks,
+        uploadedChunks: Array(chunks.length).fill(false),
+        currentChunkIndex: 0,
+        status: taskStatusMap.PENDING,
+        progress: 0,
+      };
     }
 
-    // 创建新任务
-    const task: UploadTask = {
-      id: taskId,
-      file,
-      fileHash,
-      chunkSize,
-      chunks,
-      uploadedChunks: Array(chunks.length).fill(false),
-      currentChunkIndex: 0,
-      status: taskStatusMap.PENDING,
-      progress: 0,
-    };
+    console.log('[debug] verify start task:', task);
 
     // 验证文件上传状态
     try {
@@ -793,11 +802,18 @@ export class UploadQueue {
       // 由于文件对象无法序列化，我们只保留任务ID和状态信息
       // 这里将恢复的任务标记为暂停状态，用户需要重新添加文件才能继续上传
       for (const taskData of parsedTasks) {
+        // 保留原始状态，尤其是已完成的任务
+        const originalStatus = taskData.status;
+
         this.tasks.set(taskData.id, {
           ...taskData,
           file: new File([], taskData.fileName), // 仅占位，需要用户重新选择文件
           chunks: [], // 占位，需要重新处理文件
-          status: taskStatusMap.PAUSED, // 恢复时默认为暂停状态
+          status:
+            // 如果任务原本是已完成状态，保持完成状态；否则设置为暂停状态
+            originalStatus === taskStatusMap.COMPLETED
+              ? taskStatusMap.COMPLETED
+              : taskStatusMap.PAUSED,
         } as UploadTask);
       }
     } catch (error) {

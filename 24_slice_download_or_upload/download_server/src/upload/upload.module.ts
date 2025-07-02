@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 
 // 确保上传目录存在
-const uploadsDir = path.join(process.cwd(), 'uploads');
+const uploadsDir = path.join(process.cwd(), 'resources');
 const chunksDir = path.join(uploadsDir, 'chunks');
 fs.ensureDirSync(uploadsDir);
 fs.ensureDirSync(chunksDir);
