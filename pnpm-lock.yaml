@@ -402,6 +402,9 @@ importers:
       axios:
         specifier: 1.8.4
         version: 1.8.4
+      dotenv:
+        specifier: 16.4.7
+        version: 16.4.7
       react:
         specifier: ^19.0.0
         version: 19.0.0

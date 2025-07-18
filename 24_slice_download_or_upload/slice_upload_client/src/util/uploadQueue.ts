@@ -52,7 +52,7 @@ interface UploadChunkParams {
   chunkIndex: number;
   fileHash: string;
   filename: string;
-  chunkHash?: string;
+  chunkHash: string;
   onProgress?: (progress: number) => void;
   abortController?: AbortController;
 }
@@ -218,6 +218,7 @@ export const uploadChunk = async ({
   file,
   chunkSize,
   chunkIndex,
+  chunkHash,
   fileHash,
   filename,
   onProgress,
@@ -235,6 +236,7 @@ export const uploadChunk = async ({
   const formData = new FormData();
   formData.append('file', chunk);
   formData.append('fileHash', fileHash);
+  formData.append('chunkHash', chunkHash);
   formData.append('filename', filename);
   formData.append('chunkIndex', chunkIndex.toString());
   formData.append('chunkTotal', chunkTotal.toString());
@@ -659,6 +661,7 @@ export class UploadQueue {
           file: task.file,
           chunkSize: task.chunkSize,
           chunkIndex: task.currentChunkIndex,
+          chunkHash: task.chunks[task.currentChunkIndex].hash,
           fileHash: task.fileHash,
           filename: task.file.name,
           abortController: task.abortController,

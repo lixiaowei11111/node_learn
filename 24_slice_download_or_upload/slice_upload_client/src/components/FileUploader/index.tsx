@@ -3,8 +3,8 @@ import {
   globalUploadQueue,
   taskStatusMap,
   TaskStatus,
-} from '../util/uploadQueue';
-import UploadProgress from './UploadProgress';
+} from '../../util/uploadQueue';
+import UploadProgress from '../UploadProgress';
 import { AxiosError } from 'axios';
 
 interface FileInfo {

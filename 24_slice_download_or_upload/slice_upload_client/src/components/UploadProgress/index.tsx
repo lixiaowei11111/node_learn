@@ -4,7 +4,9 @@ import {
   TaskStatus,
   taskStatusTextMap,
   taskStatusMap,
-} from '../util/uploadQueue';
+} from '../../util/uploadQueue';
+
+import { Button } from 'antd';
 
 interface UploadProgressProps {
   filename: string;
@@ -27,15 +29,40 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
     return '#2196f3'; // 默认 - 蓝色
   };
 
+  const handleDownload = () => {
+    if (fileUrl) {
+      const downloadLink = document.createElement('a');
+
+      // 完整URL，包含服务器地址和文件路径
+      const fullUrl = `${process.env.SERVER_HOST}/api${fileUrl}`;
+
+      // 设置下载属性，提供默认文件名
+      downloadLink.href = fullUrl;
+      downloadLink.download = filename;
+
+      // 可选：添加rel="noopener"提高安全性
+      downloadLink.rel = 'noopener noreferrer';
+
+      // 触发下载
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    }
+  };
+
   return (
     <div className="upload-progress">
       <div className="file-info">
         <div className="filename">
           {filename}&nbsp;
-          {fileUrl && (
-            <a href={fileUrl} target="_blank" rel="noreferrer">
-              (查看)
-            </a>
+          {fileUrl && status === taskStatusMap.COMPLETED && (
+            <Button
+              type="link"
+              onClick={handleDownload}
+              className="download-button"
+            >
+              查看
+            </Button>
           )}
         </div>
         <div className="status-text">{taskStatusTextMap[status]}</div>

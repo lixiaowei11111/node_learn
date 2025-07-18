@@ -1,0 +1,44 @@
+.upload-button,
+.select-button,
+.clear-button,
+.pause-button,
+.resume-button,
+.remove-button,
+.download-button {
+  padding: 8px 16px;
+  margin: 0 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.upload-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.select-button {
+  background-color: #2196f3;
+  color: white;
+}
+
+.clear-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.pause-button,
+.resume-button,
+.remove-button {
+  background-color: #ff9800;
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.download-button {
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+}

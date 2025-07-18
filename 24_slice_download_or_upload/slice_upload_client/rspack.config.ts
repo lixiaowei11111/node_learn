@@ -1,6 +1,8 @@
 import { defineConfig } from '@rspack/cli';
 import { rspack } from '@rspack/core';
 import RefreshPlugin from '@rspack/plugin-react-refresh';
+import 'dotenv/config';
+import { DefinePlugin } from '@rspack/core';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -52,6 +54,9 @@ export default defineConfig({
       template: './index.html',
     }),
     isDev ? new RefreshPlugin() : null,
+    new DefinePlugin({
+      'process.env.SERVER_HOST': JSON.stringify(process.env.SERVER_HOST),
+    }),
   ].filter(Boolean),
   optimization: {
     minimizer: [
@@ -68,7 +73,7 @@ export default defineConfig({
     proxy: [
       {
         context: ['/api'],
-        target: 'http://localhost:3210',
+        target: process.env.SERVER_HOST,
         changeOrigin: true,
       },
     ],

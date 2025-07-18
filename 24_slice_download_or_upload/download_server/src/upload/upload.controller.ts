@@ -9,9 +9,10 @@ import {
   Query,
   Res,
   UsePipes,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Express, Response } from 'express';
+import { Express, Response, Request } from 'express';
 import { UploadService } from './upload.service';
 import { ChunkUploadDto, ChunkUploadSchema } from './dto/chunk-upload.dto';
 import { VerifyChunkDto, VerifyChunkSchema } from './dto/verify-chunk.dto';
@@ -75,7 +76,8 @@ export class UploadController {
     @Param('fileHash') fileHash: string,
     @Query('filename') filename: string,
     @Res() res: Response,
+    @Req() req: Request,
   ) {
-    return this.uploadService.downloadFile(fileHash, filename, res);
+    return this.uploadService.downloadFile(fileHash, filename, res, req);
   }
 }
