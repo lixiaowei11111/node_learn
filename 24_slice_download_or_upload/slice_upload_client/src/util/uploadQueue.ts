@@ -36,6 +36,13 @@ interface ChunkType {
   hash: string;
 }
 
+interface WorkerChunkType {
+  hash: string;
+  size: number;
+  start: number;
+  end: number;
+}
+
 interface VerifyChunkParams {
   fileHash: string;
   chunkHash?: string;
@@ -104,14 +111,78 @@ export interface UploadTask {
   abortController?: AbortController; // 用于取消上传请求
 }
 
-// 处理文件，计算哈希并分片
-export const processFile = (
+const processFileWithWorker = (
   file: File,
-  chunkSize: number = DEFAULT_CHUNK_SIZE,
+  chunkSize: number,
 ): Promise<{
   fileHash: string;
   chunks: ChunkType[];
 }> => {
+  return new Promise((resolve, reject) => {
+    // 创建WebWorker
+    const worker = new Worker(
+      /** new URL()必须写在里面,不能拆开 https://rspack.rs/zh/guide/features/web-workers#%E4%BD%BF%E7%94%A8%E6%96%B9%E5%BC%8F */
+      new URL('../worker/generateHash.ts', import.meta.url),
+      { type: 'module' },
+    );
+
+    // 监听Worker消息
+    worker.onmessage = (e) => {
+      const { type, data, error, progress } = e.data;
+
+      if (type === 'complete') {
+        // 处理完成，将Worker返回的数据转换为所需格式
+        // 由于Worker中无法传输Blob对象，需要在这里重新创建分片Blob
+        const chunks: ChunkType[] = data.chunks.map(
+          (chunkInfo: WorkerChunkType) => ({
+            chunk: file.slice(chunkInfo.start, chunkInfo.end),
+            hash: chunkInfo.hash,
+          }),
+        );
+
+        resolve({
+          fileHash: data.fileHash,
+          chunks,
+        });
+
+        // 终止Worker
+        worker.terminate();
+      } else if (type === 'progress') {
+        // 这里可以处理进度更新，但当前函数不接受进度回调参数
+        // 未来可以扩展该函数以支持进度报告
+        console.log(`文件处理进度: ${progress.toFixed(2)}%`);
+      } else if (type === 'error') {
+        reject(new Error(error));
+        worker.terminate();
+      }
+    };
+
+    // 处理Worker错误
+    worker.onerror = (err) => {
+      reject(new Error(`Worker错误: ${err.message}`));
+      worker.terminate();
+    };
+
+    // 发送数据到Worker
+    worker.postMessage({
+      file,
+      chunkSize,
+    });
+  });
+};
+
+// 处理文件，计算哈希并分片
+export const processFile = (
+  file: File,
+  chunkSize: number = DEFAULT_CHUNK_SIZE,
+  useWorker?: boolean,
+): Promise<{
+  fileHash: string;
+  chunks: ChunkType[];
+}> => {
+  if (useWorker) {
+    return processFileWithWorker(file, chunkSize);
+  }
   return new Promise((resolve, reject) => {
     // 用于计算整个文件的哈希值
     const fileSpark = new SparkMD5.ArrayBuffer();
@@ -405,13 +476,16 @@ export class UploadQueue {
     chunkSize: number = DEFAULT_CHUNK_SIZE,
   ): Promise<string> {
     // 处理文件，计算哈希并分块
-    const { fileHash, chunks } = await processFile(file, chunkSize);
+    const start = performance.now();
+    const { fileHash, chunks } = await processFile(file, chunkSize, true);
+    const end = performance.now();
     console.log(
       '[debug] 文件分片完成',
       fileHash,
       chunks,
       this.tasks,
       this.tasks.has(fileHash),
+      `耗时：${end - start}ms`,
     );
     const taskId = fileHash;
 
