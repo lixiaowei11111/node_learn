@@ -74,10 +74,10 @@ export class UploadController {
   @Get('download/:fileHash')
   downloadFile(
     @Param('fileHash') fileHash: string,
-    @Query('filename') filename: string,
     @Res() res: Response,
     @Req() req: Request,
+    @Query('filename') filename?: string,
   ) {
-    return this.uploadService.downloadFile(fileHash, filename, res, req);
+    return this.uploadService.downloadFile(fileHash, res, req, filename);
   }
 }

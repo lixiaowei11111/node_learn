@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
+use clap::Parser;
 use futures::stream::StreamExt;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{Seek, SeekFrom, Write};
 use std::path::Path;
@@ -10,33 +10,34 @@ use std::time::Instant;
 use tokio::task;
 
 const API_BASE_URL: &str = "http://127.0.0.1:3210/api";
-const CHUNK_SIZE: usize = 250 * 1024 * 1024;
-const NUM_THREADS: usize = 20;
-const FILE_HASH: &str = "3e83cac0f6bc230a8dfe8fa7632d59d7";
+const CHUNK_SIZE: usize = 25 * 1024 * 1024;
+const NUM_THREADS: usize = 100;
+const DEFAULT_FILE_HASH: &str = "3e83cac0f6bc230a8dfe8fa7632d59d7";
+
+#[derive(Parser)]
+#[command(name = "file-downloader")]
+#[command(about = "A multithreaded file downloader")]
+struct Args {
+    /// File hash to download
+    #[arg(long = "file-hash", default_value = DEFAULT_FILE_HASH)]
+    file_hash: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 从命令行参数获取输出文件名
-    let args: Vec<String> = env::args().collect();
-    let output_file = Arc::new(if args.len() > 1 {
-        args[1].clone()
-    } else {
-        "downloaded_file".to_string()
-    });
-
-    let path_prefix = Path::new("resources/");
-
-    let output_path = path_prefix.join(Path::new(output_file.as_str()));
-
     println!("Multithreaded File Downloader");
-    println!("Target file hash: {}", FILE_HASH);
-    println!("Output file: {}", output_path.display());
+
+    // 解析命令行参数
+    let args = Args::parse();
+    let file_hash = &args.file_hash;
+
+    println!("Target file hash: {}", file_hash);
 
     // 创建HTTP客户端
     let client = reqwest::Client::new();
 
     // 首先发送HEAD请求以获取文件大小
-    let file_url = format!("{}/upload/download/{}", API_BASE_URL, FILE_HASH);
+    let file_url = format!("{}/upload/download/{}", API_BASE_URL, file_hash);
     println!("Fetching file information from {file_url}...");
 
     let resp = client
@@ -59,6 +60,8 @@ async fn main() -> Result<()> {
         .context("Missing Content-Range header")?
         .to_str()?;
 
+    println!("Content Range {}", content_range);
+
     let file_size = content_range
         .split('/')
         .last()
@@ -66,6 +69,30 @@ async fn main() -> Result<()> {
         .parse::<usize>()?;
 
     println!("File size: {} bytes", file_size);
+
+    let content_disposition = resp
+        .headers()
+        .get("Content-Disposition")
+        .context("Missing Content-Disposition header")?
+        .to_str()?;
+
+    println!("Content Disposition {}", content_disposition);
+
+    let file_name = content_disposition
+        .split("filename=")
+        .last()
+        .context("Invalid Content-Disposition header")?
+        .to_string();
+
+    println!("File name {}", file_name);
+
+    let output_file = Arc::new(file_name);
+
+    let path_prefix = Path::new("resources/");
+
+    let output_path = path_prefix.join(Path::new(output_file.as_str()));
+
+    println!("Output file: {}", output_path.display());
 
     // 创建输出文件
     let file = File::create(&output_path)?;
@@ -127,7 +154,6 @@ async fn main() -> Result<()> {
         let task = task::spawn(async move {
             // 获取信号量许可
             let _permit = permit.acquire().await.unwrap();
-
             let result = download_chunk(
                 &client,
                 &file_url,

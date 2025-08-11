@@ -1,4 +1,5 @@
-import SparkMD5 from 'spark-md5';
+// 从wasm-hash模块导入哈希计算功能
+import { initWasmHash, WasmHashCalculator } from '../wasm/wasm-hash/index.ts';
 
 interface WorkerChunkType {
   hash: string;
@@ -12,6 +13,9 @@ self.onmessage = async (event) => {
   const { file, chunkSize } = event.data;
 
   try {
+    // 初始化WASM哈希计算模块
+    await initWasmHash();
+
     const result = await processFile(file, chunkSize);
     // 返回处理结果
     self.postMessage({
@@ -36,8 +40,9 @@ const processFile = (
 }> => {
   return new Promise((resolve, reject) => {
     // 用于计算整个文件的哈希值
-    const fileSpark = new SparkMD5.ArrayBuffer();
-    // 用于存储每个分块的信息（注意：在worker中不能传输Blob对象，只存储信息）
+    const hashCalculator = new WasmHashCalculator();
+
+    // 用于存储每个分块的信息
     const chunks: WorkerChunkType[] = [];
 
     // 预先创建所有的分块信息
@@ -68,14 +73,14 @@ const processFile = (
     fileReader.onload = async (e) => {
       if (e.target?.result) {
         const arrayBuffer = e.target.result as ArrayBuffer;
+        const uint8Array = new Uint8Array(arrayBuffer);
 
         // 添加到整个文件的哈希计算
-        fileSpark.append(arrayBuffer);
+        hashCalculator.update(uint8Array);
 
         // 计算当前分块的哈希
-        const chunkSpark = new SparkMD5.ArrayBuffer();
-        chunkSpark.append(arrayBuffer);
-        chunks[currentChunk].hash = chunkSpark.end();
+        chunks[currentChunk].hash =
+          hashCalculator.calculateChunkHash(uint8Array);
 
         currentChunk++;
         reportProgress();
@@ -86,7 +91,7 @@ const processFile = (
         } else {
           // 完成所有分块读取和哈希计算
           resolve({
-            fileHash: fileSpark.end(),
+            fileHash: hashCalculator.finalize(),
             chunks,
           });
         }
@@ -110,8 +115,9 @@ const processFile = (
       loadNext();
     } else {
       // 文件为空的情况
+      const emptyHashCalculator = new WasmHashCalculator();
       resolve({
-        fileHash: new SparkMD5.ArrayBuffer().end(),
+        fileHash: emptyHashCalculator.finalize(),
         chunks: [],
       });
     }

@@ -234,9 +234,9 @@ export class UploadService {
   // 下载已上传的文件
   async downloadFile(
     fileHash: string,
-    filename: string,
     res: Response,
     req: Request,
+    filename?: string,
   ) {
     // 查找以该文件哈希开头的所有文件
     const files = await fs.readdir(this.filesDir);
@@ -249,6 +249,13 @@ export class UploadService {
 
     const filePath = path.join(this.filesDir, existingFile);
 
+    // 从文件名中提取原始文件名（格式：{fileHash}-{originalFilename}）
+    const originalFilename = existingFile.substring(fileHash.length + 1);
+
+    // 如果没有通过查询参数提供filename，则使用从文件名中提取的原始文件名
+    const actualFilename =
+      filename && filename !== 'undefined' ? filename : originalFilename;
+
     // 获取文件信息
     const stat = await fs.stat(filePath);
     const fileSize = stat.size;
@@ -257,7 +264,7 @@ export class UploadService {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=${encodeURIComponent(filename)}`,
+      `attachment; filename=${encodeURIComponent(actualFilename)}`,
     );
     res.setHeader('Accept-Ranges', 'bytes'); // 告诉客户端支持范围请求
 
