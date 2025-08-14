@@ -105,11 +105,11 @@
   + malloc()调用成功不会初始化实际的地址。声明 ArrayBuffer 则会将所有二进制位初始化为 0。
   + 通过 malloc()分配的堆内存除非调用 free()或程序退出，否则系统不能再使用。而通过声明ArrayBuffer 分配的堆内存可以被当成垃圾回收，不用手动释放。
 
-+ 在WebGL中使用JS数组和原生数组不匹配会产生性能问题,于是Mozilla为了解决这个问题实现了CanvasFloatArray,这是一个提供JavaScript 接口的、C 语言风格的浮点值数组。JavaScript 运行时使用这个类型可以分配、读取和写入数组。这个数组可以直接传给底层图形驱动程序 API，也可以直接从底层获取到。最终，CanvasFloatArray变成了 Float32Array，也就是今天定型数组中可用的第一个“类型”。
++ 在WebGL中使用JS数组和原生数组的类型不匹配会产生性能问题,于是Mozilla为了解决这个问题实现了CanvasFloatArray,这是一个提供JavaScript 接口的、C 语言风格的浮点值数组。JavaScript 运行时使用这个类型可以分配、读取和写入数组。这个数组可以直接传给底层图形驱动程序 API，也可以直接从底层获取到。最终，CanvasFloatArray变成了 Float32Array，也就是今天定型数组中可用的第一个“类型”。
 
 + Float32Array 实际上是一种“视图”，可以允许 JavaScript 运行时访问一块名为 ArrayBuffer 的预分配内存。ArrayBuffer 是所有定型数组及视图引用的基本单位。
 + ArrayBuffer是一个构造函数,且**一旦创建就不能变更大小,也不能直接变更ArrayBuffer实例的内容**,要对ArrayBuffer开辟的内存进行Write/Read(或者I/O)操作,需要使用View类型的数组,View有DataView和TypedArray两种类型
-+ View实例持有的是ArrayBuffer实例的引用,而非ArrayBuffer的副本,而ArrayBuffer.prototpye.slice方法是复制一个ArrayBuffer的数据,开辟一个新的内存缓存区域
++ View实例持有的是ArrayBuffer实例的引用,而非ArrayBuffer的副本,而ArrayBuffer.prototype.slice方法是复制一个ArrayBuffer的数据,开辟一个新的内存缓存区域
 
 > 在最新的MDN文档中,ArrayBuffer是可以通过添加构造函数属性[`maxByteLength`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer#%E8%B0%83%E6%95%B4_arraybuffer_%E7%9A%84%E5%A4%A7%E5%B0%8F)改变大小的,`const buffer = new ArrayBuffer(8, { maxByteLength: 16 });`
 
