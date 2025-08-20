@@ -19,5 +19,6 @@ packages:
   - "24_slice_download_or_upload/**"
   - "27_react_useEffect_correct_usage"
   - "28_swc_explore"
+  - "30_websocket"
 # install common dependencies: `pnpm add xxx -w` -w equal --workspace-root
 # install dependencies for specifics packages: `pnpm add xxx 03_pnpm_workspaces_demo1`
