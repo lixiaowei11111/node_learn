@@ -206,6 +206,7 @@ function App() {
       {
         id: connectionState.clientId,
         name: connectionState.clientName,
+        ip: connectionState.clientIP,
         isCurrentDevice: true,
       },
       ...otherClients,
@@ -217,6 +218,7 @@ function App() {
     connectionState.isConnected,
     connectionState.clientId,
     connectionState.clientName,
+    connectionState.clientIP,
   ]);
 
   // 控制面板组件 - 使用 useMemo 优化，避免组件重新创建
@@ -285,6 +287,14 @@ function App() {
                         <Text type="secondary" style={clientIdStyle}>
                           {client.id.substring(0, 8)}...
                         </Text>
+                        {client.ip && (
+                          <>
+                            <br />
+                            <Text type="secondary" style={clientIdStyle}>
+                              IP: {client.ip}
+                            </Text>
+                          </>
+                        )}
                       </div>
                       <Button
                         size={isMobile ? 'large' : 'small'}

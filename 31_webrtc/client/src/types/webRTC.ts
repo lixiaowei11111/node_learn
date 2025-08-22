@@ -1,6 +1,7 @@
 export interface Client {
   id: string;
   name: string;
+  ip?: string;
 }
 
 export interface ExtendedClient extends Client {
@@ -42,6 +43,7 @@ export interface RegisteredMessage extends SignalingMessage {
   type: 'registered';
   clientId: string;
   name: string;
+  ip?: string;
 }
 
 export interface ClientListMessage extends SignalingMessage {
@@ -88,6 +90,7 @@ export interface ConnectionState {
   isConnected: boolean;
   clientId: string;
   clientName: string;
+  clientIP?: string;
   error: string | null;
 }
 

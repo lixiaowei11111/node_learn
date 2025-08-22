@@ -11,6 +11,8 @@ interface Client {
   ws: WebSocket;
   connected: boolean;
   lastSeen: number;
+  ip: string;
+  userAgent?: string;
 }
 
 const app = new Hono();
@@ -26,6 +28,30 @@ app.use(
   }),
 );
 
+// 获取客户端真实IP地址的函数
+function getClientIP(c: any): string {
+  // 检查各种可能包含真实IP的头部
+  const forwarded = c.req.header('x-forwarded-for');
+  const realIP = c.req.header('x-real-ip');
+  const cfConnectingIP = c.req.header('cf-connecting-ip');
+
+  if (forwarded) {
+    // x-forwarded-for 可能包含多个IP，第一个是客户端真实IP
+    return forwarded.split(',')[0].trim();
+  }
+
+  if (realIP) {
+    return realIP;
+  }
+
+  if (cfConnectingIP) {
+    return cfConnectingIP;
+  }
+
+  // 如果都没有，尝试从连接信息获取
+  return c.req.header('remote-addr') || 'unknown';
+}
+
 // WebSocket升级
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 
@@ -33,9 +59,13 @@ const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
 app.get(
   '/ws',
   upgradeWebSocket((c) => {
+    // 获取客户端IP和User-Agent
+    const clientIP = getClientIP(c);
+    const userAgent = c.req.header('user-agent') || '';
+
     return {
       onOpen: (evt, ws) => {
-        console.log('Client connected');
+        console.log(`Client connected from IP: ${clientIP}`);
       },
       onMessage: (evt, ws) => {
         try {
@@ -63,15 +93,20 @@ app.get(
                 ws: ws.raw,
                 connected: true,
                 lastSeen: Date.now(),
+                ip: clientIP,
+                userAgent: userAgent,
               };
               clients.set(clientId, client);
 
-              // 发送注册成功消息
+              console.log(`Client registered: ${client.name} (${clientId}) from IP: ${clientIP}`);
+
+              // 发送注册成功消息，包含IP信息
               ws.send(
                 JSON.stringify({
                   type: 'registered',
                   clientId: clientId,
                   name: client.name,
+                  ip: clientIP,
                 }),
               );
 
@@ -153,11 +188,34 @@ app.get('/clients', (c) => {
   const clientList = Array.from(clients.values()).map((client) => ({
     id: client.id,
     name: client.name,
+    ip: client.ip,
+    connected: client.connected,
+    lastSeen: new Date(client.lastSeen).toISOString(),
+    userAgent: client.userAgent,
   }));
 
   return c.json({
     clients: clientList,
     count: clientList.length,
+  });
+});
+
+// 新增：获取特定客户端详细信息的接口
+app.get('/clients/:id', (c) => {
+  const clientId = c.req.param('id');
+  const client = clients.get(clientId);
+
+  if (!client) {
+    return c.json({ error: 'Client not found' }, 404);
+  }
+
+  return c.json({
+    id: client.id,
+    name: client.name,
+    ip: client.ip,
+    connected: client.connected,
+    lastSeen: new Date(client.lastSeen).toISOString(),
+    userAgent: client.userAgent,
   });
 });
 

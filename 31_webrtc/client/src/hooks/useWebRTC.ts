@@ -31,6 +31,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     isConnected: false,
     clientId: '',
     clientName: '',
+    clientIP: '',
     error: null,
   });
 
@@ -252,6 +253,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
               isConnected: true,
               clientId: msg.clientId,
               clientName: msg.name,
+              clientIP: msg.ip,
               error: null,
             }));
             break;
