@@ -30,7 +30,7 @@ import {
 } from '@ant-design/icons';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useMobile, mobileUtils } from './hooks/useMobile';
-import { FileTransfer } from './types/webRTC';
+import { FileTransfer, ExtendedClient } from './types/webRTC';
 import './App.css';
 import './mobile.css';
 
@@ -190,6 +190,35 @@ function App() {
     [isMobile],
   );
 
+  // 生成显示用的客户端列表，包含本设备
+  const displayClients = useMemo((): ExtendedClient[] => {
+    if (!connectionState.isConnected || !connectionState.clientId) {
+      return [];
+    }
+
+    // 过滤掉服务器返回的本地设备，避免重复显示
+    const otherClients: ExtendedClient[] = clients.filter(
+      (client) => client.id !== connectionState.clientId,
+    );
+
+    // 添加本设备到列表顶部
+    const allClients: ExtendedClient[] = [
+      {
+        id: connectionState.clientId,
+        name: connectionState.clientName,
+        isCurrentDevice: true,
+      },
+      ...otherClients,
+    ];
+
+    return allClients;
+  }, [
+    clients,
+    connectionState.isConnected,
+    connectionState.clientId,
+    connectionState.clientName,
+  ]);
+
   // 控制面板组件 - 使用 useMemo 优化，避免组件重新创建
   const controlPanelContent = useMemo(
     () => (
@@ -232,38 +261,47 @@ function App() {
             title={
               <Space>
                 <TeamOutlined />
-                在线客户端 ({clients.length})
+                设备列表 ({displayClients.length})
               </Space>
             }
             size={isMobile ? 'small' : 'default'}
           >
             <List
               size="small"
-              dataSource={clients}
-              renderItem={(client) => (
-                <List.Item style={clientListPadding}>
-                  <div style={clientItemStyle}>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong style={clientNameStyle}>
-                        {client.name}
-                      </Text>
-                      <br />
-                      <Text type="secondary" style={clientIdStyle}>
-                        {client.id.substring(0, 8)}...
-                      </Text>
+              dataSource={displayClients}
+              renderItem={(client) => {
+                const isCurrentDevice = client.isCurrentDevice ?? false;
+                return (
+                  <List.Item style={clientListPadding}>
+                    <div style={clientItemStyle}>
+                      <div style={{ marginBottom: 8 }}>
+                        <Space>
+                          <Text strong style={clientNameStyle}>
+                            {client.name}
+                          </Text>
+                          {isCurrentDevice && <Tag color="blue">本设备</Tag>}
+                        </Space>
+                        <br />
+                        <Text type="secondary" style={clientIdStyle}>
+                          {client.id.substring(0, 8)}...
+                        </Text>
+                      </div>
+                      <Button
+                        size={isMobile ? 'large' : 'small'}
+                        type={isCurrentDevice ? 'default' : 'primary'}
+                        onClick={() => handleSendFile(client.id)}
+                        disabled={!selectedFile || isCurrentDevice}
+                        block
+                        title={
+                          isCurrentDevice ? '不能向自己发送文件' : '发送文件'
+                        }
+                      >
+                        {isCurrentDevice ? '本设备' : '发送文件'}
+                      </Button>
                     </div>
-                    <Button
-                      size={isMobile ? 'large' : 'small'}
-                      type="primary"
-                      onClick={() => handleSendFile(client.id)}
-                      disabled={!selectedFile}
-                      block
-                    >
-                      发送文件
-                    </Button>
-                  </div>
-                </List.Item>
-              )}
+                  </List.Item>
+                );
+              }}
               locale={{ emptyText: '暂无其他客户端在线' }}
             />
           </Card>
@@ -278,7 +316,7 @@ function App() {
       connectionState.isConnected,
       handleConnect,
       handleDisconnect,
-      clients,
+      displayClients,
       handleSendFile,
       selectedFile,
       clientItemStyle,
@@ -326,7 +364,7 @@ function App() {
             <Col>
               {connectionState.isConnected ? (
                 <Tag icon={<WifiOutlined />} color="success">
-                  {clients.length}
+                  {displayClients.length - 1}
                 </Tag>
               ) : (
                 <Tag icon={<DisconnectOutlined />} color="default">
@@ -490,7 +528,7 @@ function App() {
             <Space>
               {connectionState.isConnected ? (
                 <Tag icon={<WifiOutlined />} color="success">
-                  已连接 ({clients.length} 个客户端在线)
+                  已连接 ({displayClients.length - 1} 个其他客户端在线)
                 </Tag>
               ) : (
                 <Tag icon={<DisconnectOutlined />} color="default">

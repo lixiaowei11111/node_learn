@@ -3,6 +3,10 @@ export interface Client {
   name: string;
 }
 
+export interface ExtendedClient extends Client {
+  isCurrentDevice?: boolean;
+}
+
 export interface FileTransfer {
   id: string;
   fileName: string;
