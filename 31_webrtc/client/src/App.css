@@ -1,0 +1,331 @@
+.App {
+  text-align: center;
+}
+
+/* 响应式头部 */
+.ant-layout-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 移动端头部适配 */
+@media (max-width: 768px) {
+  .ant-layout-header {
+    height: 56px;
+    line-height: 56px;
+  }
+}
+
+/* 卡片阴影 */
+.ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+/* 移动端卡片适配 */
+@media (max-width: 768px) {
+  .ant-card {
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  .ant-card-head {
+    padding: 12px 16px;
+    min-height: 48px;
+  }
+
+  .ant-card-body {
+    padding: 12px 16px;
+  }
+}
+
+/* 列表项适配 */
+.ant-list-item {
+  padding: 16px !important;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+@media (max-width: 768px) {
+  .ant-list-item {
+    padding: 12px 0 !important;
+  }
+}
+
+/* 进度条 */
+.ant-progress {
+  margin: 0 !important;
+}
+
+/* 文件信息 */
+.file-info {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .file-info {
+    padding: 8px;
+    font-size: 14px;
+  }
+}
+
+/* 状态标签 */
+.status-tag {
+  margin-left: 8px;
+}
+
+@media (max-width: 768px) {
+  .status-tag {
+    margin-left: 4px;
+    margin-top: 4px;
+  }
+}
+
+/* 客户端项 */
+.client-item {
+  width: 100%;
+}
+
+/* 传输项 */
+.transfer-item {
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.transfer-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .transfer-item {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+}
+
+/* 移动端布局优化 */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    padding: 16px !important;
+  }
+
+  .ant-space-vertical {
+    width: 100%;
+  }
+
+  /* 按钮适配 */
+  .ant-btn-large {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  /* 输入框适配 */
+  .ant-input-large {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .ant-input-affix-wrapper-large {
+    height: 44px;
+  }
+
+  .ant-input-affix-wrapper-large .ant-input {
+    font-size: 16px;
+  }
+
+  /* 标签适配 */
+  .ant-tag {
+    margin-bottom: 4px;
+  }
+
+  /* 文本省略 */
+  .ant-typography-ellipsis {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 列表元信息适配 */
+  .ant-list-item-meta-title {
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .ant-list-item-meta-description {
+    line-height: 1.4;
+  }
+
+  /* 操作按钮组适配 */
+  .ant-list-item-action {
+    margin-left: 8px;
+  }
+
+  .ant-list-item-action > li {
+    padding: 0 4px;
+  }
+}
+
+/* 平板适配 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .ant-layout-sider {
+    width: 280px !important;
+  }
+
+  .ant-layout-content {
+    padding: 20px !important;
+  }
+
+  .ant-card {
+    margin-bottom: 16px;
+  }
+}
+
+/* 抽屉样式优化 */
+.ant-drawer-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ant-drawer-body {
+  padding: 16px;
+}
+
+/* 确保移动端触摸友好 */
+@media (max-width: 768px) {
+  .ant-btn,
+  .ant-input,
+  .ant-upload {
+    touch-action: manipulation;
+  }
+
+  /* 增加可点击区域 */
+  .ant-list-item-action button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* 优化上传区域 */
+  .ant-upload.ant-upload-drag {
+    padding: 20px;
+  }
+
+  .ant-upload-btn {
+    padding: 12px 0;
+  }
+}
+
+/* 加载状态优化 */
+.ant-spin-nested-loading > div > .ant-spin {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(2px);
+}
+
+/* 错误状态样式 */
+.ant-tag-error {
+  border-color: #ff4d4f;
+  background: #fff2f0;
+  color: #a8071a;
+}
+
+/* 成功状态样式 */
+.ant-tag-success {
+  border-color: #52c41a;
+  background: #f6ffed;
+  color: #389e0d;
+}
+
+/* 处理中状态样式 */
+.ant-tag-processing {
+  border-color: #1890ff;
+  background: #e6f7ff;
+  color: #0050b3;
+}
+
+/* 滚动条样式优化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 移动端禁用选择 */
+@media (max-width: 768px) {
+  .ant-layout-header * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+/* 确保在小屏幕上内容不会溢出 */
+@media (max-width: 480px) {
+  .ant-layout-content {
+    padding: 12px !important;
+  }
+
+  .ant-card-head-title {
+    font-size: 14px;
+  }
+
+  .ant-list-item-meta-title {
+    font-size: 14px;
+  }
+
+  .ant-drawer {
+    width: 90vw !important;
+  }
+}
+
+/* 高DPI屏幕适配 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .ant-card {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* 深色模式媒体查询预留 */
+@media (prefers-color-scheme: dark) {
+  /* 如果需要支持深色模式，可以在这里添加样式 */
+}
+
+/* 减少动画以提高性能 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 无障碍性增强 */
+@media (prefers-contrast: high) {
+  .ant-card {
+    border: 2px solid #000;
+  }
+
+  .ant-btn {
+    border-width: 2px;
+  }
+}

@@ -4,7 +4,7 @@ import './App.css';
 interface WSMessage {
   type: 'chat' | 'broadcast' | 'heartbeat' | 'system';
   id?: string;
-  data: any;
+  data: { message?: string; clientId?: string; text?: string; ping?: boolean };
   timestamp: number;
   from?: string;
 }
