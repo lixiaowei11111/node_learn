@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Layout,
   Card,
@@ -77,7 +77,7 @@ function App() {
     serverUrl: 'ws://localhost:3000/ws',
   });
 
-  const handleConnect = async () => {
+  const handleConnect = useCallback(async () => {
     if (!clientName.trim()) {
       message.error('请输入客户端名称');
       return;
@@ -90,36 +90,39 @@ function App() {
       message.error('连接失败');
       console.error(error);
     }
-  };
+  }, [clientName, connect]);
 
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(() => {
     disconnect();
     message.info('已断开连接');
-  };
+  }, [disconnect]);
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
     return false; // 阻止自动上传
-  };
+  }, []);
 
-  const handleSendFile = async (targetId: string) => {
-    if (!selectedFile) {
-      message.error('请先选择文件');
-      return;
-    }
-
-    try {
-      await sendFile(targetId, selectedFile);
-      message.success('文件发送完成');
-      setSelectedFile(null);
-      if (isMobile) {
-        setDrawerVisible(false);
+  const handleSendFile = useCallback(
+    async (targetId: string) => {
+      if (!selectedFile) {
+        message.error('请先选择文件');
+        return;
       }
-    } catch (error) {
-      message.error('文件发送失败');
-      console.error(error);
-    }
-  };
+
+      try {
+        await sendFile(targetId, selectedFile);
+        message.success('文件发送完成');
+        setSelectedFile(null);
+        if (isMobile) {
+          setDrawerVisible(false);
+        }
+      } catch (error) {
+        message.error('文件发送失败');
+        console.error(error);
+      }
+    },
+    [selectedFile, sendFile, isMobile],
+  );
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -157,87 +160,132 @@ function App() {
     }
   };
 
-  // 控制面板组件
-  const ControlPanel = () => (
-    <Space direction="vertical" style={{ width: '100%' }} size="middle">
-      <Card title="连接设置" size={isMobile ? 'small' : 'default'}>
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Input
-            placeholder="输入客户端名称"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            prefix={<UserOutlined />}
-            disabled={connectionState.isConnected}
-            size={isMobile ? 'large' : 'middle'}
-          />
-          {!connectionState.isConnected ? (
-            <Button
-              type="primary"
-              onClick={handleConnect}
-              block
-              loading={false}
-              size={isMobile ? 'large' : 'middle'}
-            >
-              连接服务器
-            </Button>
-          ) : (
-            <Button
-              onClick={handleDisconnect}
-              block
-              danger
-              size={isMobile ? 'large' : 'middle'}
-            >
-              断开连接
-            </Button>
-          )}
-        </Space>
-      </Card>
+  // 优化客户端名称输入处理
+  const handleClientNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setClientName(e.target.value);
+    },
+    [],
+  );
 
-      {connectionState.isConnected && (
-        <Card
-          title={
-            <Space>
-              <TeamOutlined />
-              在线客户端 ({clients.length})
-            </Space>
-          }
-          size={isMobile ? 'small' : 'default'}
-        >
-          <List
-            size="small"
-            dataSource={clients}
-            renderItem={(client) => (
-              <List.Item style={{ padding: isMobile ? '8px 0' : '16px 0' }}>
-                <div style={{ width: '100%' }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text
-                      strong
-                      style={{ fontSize: isMobile ? '14px' : '16px' }}
-                    >
-                      {client.name}
-                    </Text>
-                    <br />
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                      {client.id.substring(0, 8)}...
-                    </Text>
-                  </div>
-                  <Button
-                    size={isMobile ? 'large' : 'small'}
-                    type="primary"
-                    onClick={() => handleSendFile(client.id)}
-                    disabled={!selectedFile}
-                    block
-                  >
-                    发送文件
-                  </Button>
-                </div>
-              </List.Item>
+  // 稳定的样式对象，避免重复创建
+  const connectionCardStyle = useMemo(() => ({ width: '100%' }), []);
+  const clientItemStyle = useMemo(
+    () => ({
+      width: '100%',
+    }),
+    [],
+  );
+  const clientNameStyle = useMemo(
+    () => ({
+      fontSize: isMobile ? '14px' : '16px',
+    }),
+    [isMobile],
+  );
+  const clientIdStyle = useMemo(() => ({ fontSize: '12px' }), []);
+  const clientListPadding = useMemo(
+    () => ({
+      padding: isMobile ? '8px 0' : '16px 0',
+    }),
+    [isMobile],
+  );
+
+  // 控制面板组件 - 使用 useMemo 优化，避免组件重新创建
+  const controlPanelContent = useMemo(
+    () => (
+      <Space direction="vertical" style={connectionCardStyle} size="middle">
+        <Card title="连接设置" size={isMobile ? 'small' : 'default'}>
+          <Space direction="vertical" style={connectionCardStyle}>
+            <Input
+              placeholder="输入客户端名称"
+              value={clientName}
+              onChange={handleClientNameChange}
+              prefix={<UserOutlined />}
+              disabled={connectionState.isConnected}
+              size={isMobile ? 'large' : 'middle'}
+            />
+            {!connectionState.isConnected ? (
+              <Button
+                type="primary"
+                onClick={handleConnect}
+                block
+                loading={false}
+                size={isMobile ? 'large' : 'middle'}
+              >
+                连接服务器
+              </Button>
+            ) : (
+              <Button
+                onClick={handleDisconnect}
+                block
+                danger
+                size={isMobile ? 'large' : 'middle'}
+              >
+                断开连接
+              </Button>
             )}
-            locale={{ emptyText: '暂无其他客户端在线' }}
-          />
+          </Space>
         </Card>
-      )}
-    </Space>
+
+        {connectionState.isConnected && (
+          <Card
+            title={
+              <Space>
+                <TeamOutlined />
+                在线客户端 ({clients.length})
+              </Space>
+            }
+            size={isMobile ? 'small' : 'default'}
+          >
+            <List
+              size="small"
+              dataSource={clients}
+              renderItem={(client) => (
+                <List.Item style={clientListPadding}>
+                  <div style={clientItemStyle}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text strong style={clientNameStyle}>
+                        {client.name}
+                      </Text>
+                      <br />
+                      <Text type="secondary" style={clientIdStyle}>
+                        {client.id.substring(0, 8)}...
+                      </Text>
+                    </div>
+                    <Button
+                      size={isMobile ? 'large' : 'small'}
+                      type="primary"
+                      onClick={() => handleSendFile(client.id)}
+                      disabled={!selectedFile}
+                      block
+                    >
+                      发送文件
+                    </Button>
+                  </div>
+                </List.Item>
+              )}
+              locale={{ emptyText: '暂无其他客户端在线' }}
+            />
+          </Card>
+        )}
+      </Space>
+    ),
+    [
+      connectionCardStyle,
+      isMobile,
+      clientName,
+      handleClientNameChange,
+      connectionState.isConnected,
+      handleConnect,
+      handleDisconnect,
+      clients,
+      handleSendFile,
+      selectedFile,
+      clientItemStyle,
+      clientNameStyle,
+      clientIdStyle,
+      clientListPadding,
+    ],
   );
 
   // 移动端布局
@@ -422,7 +470,7 @@ function App() {
           open={drawerVisible}
           width={280}
         >
-          <ControlPanel />
+          {controlPanelContent}
         </Drawer>
       </Layout>
     );
@@ -462,7 +510,7 @@ function App() {
           width={320}
           style={{ background: '#fff', padding: '24px' }}
         >
-          <ControlPanel />
+          {controlPanelContent}
         </Layout.Sider>
 
         <Content style={{ padding: '24px' }}>

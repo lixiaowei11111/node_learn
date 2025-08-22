@@ -55,7 +55,7 @@ export const useMobile = (): MobileInfo => {
       // 检测横屏
       const isLandscape = screenWidth > screenHeight;
 
-      setMobileInfo({
+      const newMobileInfo = {
         isMobile,
         isIOS,
         isAndroid,
@@ -63,27 +63,49 @@ export const useMobile = (): MobileInfo => {
         screenWidth,
         screenHeight,
         isLandscape,
+      };
+
+      // 只有在值真正改变时才更新状态，避免不必要的重渲染
+      setMobileInfo((prev) => {
+        if (
+          prev.isMobile !== newMobileInfo.isMobile ||
+          prev.isIOS !== newMobileInfo.isIOS ||
+          prev.isAndroid !== newMobileInfo.isAndroid ||
+          prev.deviceType !== newMobileInfo.deviceType ||
+          Math.abs(prev.screenWidth - newMobileInfo.screenWidth) > 50 || // 只有显著变化才更新
+          Math.abs(prev.screenHeight - newMobileInfo.screenHeight) > 50 ||
+          prev.isLandscape !== newMobileInfo.isLandscape
+        ) {
+          return newMobileInfo;
+        }
+        return prev;
       });
     };
 
     // 初始检测
     detectDevice();
 
-    // 监听窗口大小变化
+    // 防抖函数，避免频繁更新
+    let resizeTimer: NodeJS.Timeout;
     const handleResize = () => {
-      detectDevice();
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(detectDevice, 300); // 300ms 防抖
     };
 
     // 监听设备方向变化
+    let orientationTimer: NodeJS.Timeout;
     const handleOrientationChange = () => {
+      clearTimeout(orientationTimer);
       // 延迟检测，等待方向变化完成
-      setTimeout(detectDevice, 100);
+      orientationTimer = setTimeout(detectDevice, 500);
     };
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleOrientationChange);
 
     return () => {
+      clearTimeout(resizeTimer);
+      clearTimeout(orientationTimer);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleOrientationChange);
     };
