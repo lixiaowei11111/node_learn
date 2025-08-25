@@ -15,7 +15,7 @@ import { useDataChannel } from './useDataChannel';
 import { useFileTransfer } from './useFileTransfer';
 
 const DEFAULT_OPTIONS: Required<UseWebRTCOptions> = {
-  serverUrl: 'ws://localhost:3000/ws',
+  serverUrl: process.env.WS_HOST!,
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
   chunkSize: 65536, // 64KB - 更稳定的块大小，避免缓冲区问题
   autoFetchICEServers: true, // 默认自动从服务器获取 ICE 服务器配置

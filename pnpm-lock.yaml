@@ -598,6 +598,9 @@ importers:
       dayjs:
         specifier: 1.11.13
         version: 1.11.13
+      dotenv:
+        specifier: 16.4.7
+        version: 16.4.7
       lucide-react:
         specifier: 0.541.0
         version: 0.541.0(react@19.1.1)

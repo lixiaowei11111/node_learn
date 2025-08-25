@@ -24,7 +24,7 @@ interface ICEServerManagerProps {
 }
 
 export const ICEServerManager: React.FC<ICEServerManagerProps> = ({
-  serverUrl = 'http://localhost:3000',
+  serverUrl = process.env.HTTP_HOST,
 }) => {
   const [config, setConfig] = useState<ServerConfig | null>(null);
   const [loading, setLoading] = useState(false);

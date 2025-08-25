@@ -135,7 +135,7 @@ export function MobileLayout({
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <RoomManager isConnected={connectionState.isConnected} />
-            <ICEServerManager serverUrl="http://localhost:3000" />
+            <ICEServerManager serverUrl={process.env.HTTP_HOST} />
           </div>
         )}
       </main>

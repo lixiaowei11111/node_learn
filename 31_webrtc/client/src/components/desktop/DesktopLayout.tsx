@@ -134,7 +134,7 @@ export function DesktopLayout({
             )}
 
             {activeTab === 'settings' && (
-              <ICEServerManager serverUrl="http://localhost:3000" />
+              <ICEServerManager serverUrl={process.env.HTTP_HOST} />
             )}
           </div>
         </main>

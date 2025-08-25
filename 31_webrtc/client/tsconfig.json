@@ -23,10 +23,10 @@
       "@/*": [
         "./src/*"
       ]
-    }
+    },
   },
   "include": [
-    "src"
+    "src",
   ],
   "ts-node": {
     "compilerOptions": {

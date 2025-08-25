@@ -46,7 +46,7 @@ function App() {
     clearTransfers,
     removeTransfer,
   } = useWebRTC({
-    serverUrl: 'ws://localhost:3000/ws',
+    serverUrl: process.env.WS_HOST,
   });
 
   // 处理连接
