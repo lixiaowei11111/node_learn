@@ -1,4 +1,4 @@
-import type { ICEServerConfig, ServerConfig, ConfigRequest } from '../types/config.js';
+import type { ICEServerConfig, ServerConfig, ConfigRequest } from '../types/config';
 
 class ICEServerManager {
   private config: ServerConfig;

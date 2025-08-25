@@ -1,6 +1,6 @@
 import type { Context } from 'hono';
-import { iceServerManager } from '../services/iceServerManager.js';
-import type { ConfigRequest } from '../types/config.js';
+import { iceServerManager } from '../services/iceServerManager';
+import type { ConfigRequest } from '../types/config';
 
 // 获取 ICE 服务器配置
 export const getICEServers = (c: Context) => {
