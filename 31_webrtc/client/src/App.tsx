@@ -50,8 +50,12 @@ function App() {
   const handleConnect = useCallback(
     async (clientName: string) => {
       try {
-        await connect(clientName);
-        toast.success('连接成功');
+        // 从URL参数获取房间ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room');
+
+        await connect(clientName, roomId || undefined);
+        toast.success(`连接成功${roomId ? ` - 房间: ${roomId}` : ''}`);
       } catch (error) {
         toast.error('连接失败');
         throw error;

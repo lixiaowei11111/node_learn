@@ -13,7 +13,7 @@ export class ClientManager {
   /**
    * 注册新客户端
    */
-  registerClient(ws: WebSocket, name: string | undefined, ip: string, userAgent?: string): Client {
+  registerClient(ws: WebSocket, name: string | undefined, ip: string, userAgent?: string, roomId?: string): Client {
     const clientId = uuidv4();
     const client: Client = {
       id: clientId,
@@ -23,10 +23,11 @@ export class ClientManager {
       lastSeen: Date.now(),
       ip,
       userAgent,
+      roomId: roomId || 'default', // 默认房间
     };
 
     this.clients.set(clientId, client);
-    console.log(`Client registered: ${client.name} (${clientId}) from IP: ${ip}`);
+    console.log(`Client registered: ${client.name} (${clientId}) from IP: ${ip}, Room: ${client.roomId}`);
 
     return client;
   }
@@ -68,6 +69,26 @@ export class ClientManager {
    */
   getAllClients(): Client[] {
     return Array.from(this.clients.values());
+  }
+
+  /**
+   * 获取指定房间的客户端
+   */
+  getClientsByRoom(roomId: string): Client[] {
+    return Array.from(this.clients.values()).filter((client) => client.roomId === roomId);
+  }
+
+  /**
+   * 获取所有房间ID
+   */
+  getAllRoomIds(): string[] {
+    const roomIds = new Set<string>();
+    for (const client of this.clients.values()) {
+      if (client.roomId) {
+        roomIds.add(client.roomId);
+      }
+    }
+    return Array.from(roomIds);
   }
 
   /**

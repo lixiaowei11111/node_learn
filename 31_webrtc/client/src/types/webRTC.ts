@@ -37,6 +37,7 @@ export interface SignalingMessage {
 export interface RegisterMessage extends SignalingMessage {
   type: 'register';
   name: string;
+  roomId?: string; // 添加房间ID
 }
 
 export interface RegisteredMessage extends SignalingMessage {
@@ -44,6 +45,7 @@ export interface RegisteredMessage extends SignalingMessage {
   clientId: string;
   name: string;
   ip?: string;
+  roomId?: string; // 添加房间ID
 }
 
 export interface ClientListMessage extends SignalingMessage {
@@ -120,7 +122,7 @@ export interface UseWebRTCReturn {
   transfers: FileTransfer[];
 
   // 连接方法
-  connect: (name: string) => Promise<void>;
+  connect: (name: string, roomId?: string) => Promise<void>;
   disconnect: () => void;
 
   // 文件传输方法

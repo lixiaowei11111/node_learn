@@ -4,6 +4,7 @@ import { FileUpload } from '../shared/FileUpload';
 import { TransferHistory } from '../shared/TransferHistory';
 import { ControlPanel } from '../shared/ControlPanel';
 import { ICEServerManager } from '../shared/ICEServerManager';
+import { RoomManager } from '../shared/RoomManager';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Settings, Home } from 'lucide-react';
@@ -58,7 +59,9 @@ export function DesktopLayout({
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-80 border-r bg-muted/30 p-6">
+        <aside className="w-80 border-r bg-muted/30 p-6 space-y-6">
+          <RoomManager isConnected={connectionState.isConnected} />
+
           <ControlPanel
             connectionState={connectionState}
             displayClients={displayClients}

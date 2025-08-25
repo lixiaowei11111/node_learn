@@ -116,9 +116,13 @@ export class WebSocketManager {
     const webSocketIP = getWebSocketClientIP(ws.raw);
     const finalIP = webSocketIP !== 'unknown' ? webSocketIP : clientIP;
 
-    console.log(`Client registering - HTTP IP: ${clientIP}, WebSocket IP: ${webSocketIP}, Final IP: ${finalIP}`);
+    console.log(
+      `Client registering - HTTP IP: ${clientIP}, WebSocket IP: ${webSocketIP}, Final IP: ${finalIP}, Room: ${
+        data.roomId || 'default'
+      }`,
+    );
 
-    const result = this.signalingManager.handleRegister(ws.raw, data.name, finalIP, userAgent);
+    const result = this.signalingManager.handleRegister(ws.raw, data.name, finalIP, userAgent, data.roomId);
 
     // 发送注册成功消息
     ws.send(

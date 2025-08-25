@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { MobileHeader } from './MobileHeader';
+import { ControlPanel } from '../shared/ControlPanel';
 import { FileUpload } from '../shared/FileUpload';
 import { TransferHistory } from '../shared/TransferHistory';
-import { ControlPanel } from '../shared/ControlPanel';
 import { ICEServerManager } from '../shared/ICEServerManager';
+import { RoomManager } from '../shared/RoomManager';
 import { Button } from '@/components/ui/button';
 import { Home, Settings } from 'lucide-react';
 import { ConnectionState, ExtendedClient, FileTransfer } from '@/types/webRTC';
@@ -100,6 +101,8 @@ export function MobileLayout({
       <main className="flex-1 container px-4 py-6">
         {activeTab === 'home' && (
           <div className="space-y-6">
+            <RoomManager isConnected={connectionState.isConnected} />
+
             <FileUpload
               selectedFile={selectedFile}
               onFileSelect={onFileSelect}
@@ -118,7 +121,10 @@ export function MobileLayout({
         )}
 
         {activeTab === 'settings' && (
-          <ICEServerManager serverUrl="http://localhost:3000" />
+          <div className="space-y-6">
+            <RoomManager isConnected={connectionState.isConnected} />
+            <ICEServerManager serverUrl="http://localhost:3000" />
+          </div>
         )}
       </main>
     </div>

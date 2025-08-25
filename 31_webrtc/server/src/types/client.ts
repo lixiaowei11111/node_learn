@@ -8,6 +8,7 @@ export interface Client {
   lastSeen: number;
   ip: string;
   userAgent?: string;
+  roomId?: string; // 添加房间ID
 }
 
 export interface ClientInfo {

@@ -8,11 +8,56 @@ import { getClientIP } from '../utils/index';
 export function createClientRoutes(app: Hono, clientManager: ClientManager) {
   // 获取所有客户端列表
   app.get('/clients', (c) => {
-    const clients = clientManager.getClientInfoList();
+    const roomId = c.req.query('room');
+
+    if (roomId) {
+      // 获取指定房间的客户端
+      const clients = clientManager.getClientsByRoom(roomId).map((client) => ({
+        id: client.id,
+        name: client.name,
+        ip: client.ip,
+        connected: client.connected,
+        lastSeen: new Date(client.lastSeen).toISOString(),
+        userAgent: client.userAgent,
+        roomId: client.roomId,
+      }));
+
+      return c.json({
+        success: true,
+        data: clients,
+        count: clients.length,
+        roomId: roomId,
+      });
+    } else {
+      // 获取所有客户端
+      const clients = clientManager.getClientInfoList();
+      return c.json({
+        success: true,
+        data: clients,
+        count: clients.length,
+      });
+    }
+  });
+
+  // 获取所有房间列表
+  app.get('/rooms', (c) => {
+    const roomIds = clientManager.getAllRoomIds();
+    const rooms = roomIds.map((roomId) => {
+      const clients = clientManager.getClientsByRoom(roomId);
+      return {
+        roomId,
+        clientCount: clients.length,
+        clients: clients.map((client) => ({
+          id: client.id,
+          name: client.name,
+        })),
+      };
+    });
+
     return c.json({
       success: true,
-      data: clients,
-      count: clients.length,
+      data: rooms,
+      count: rooms.length,
     });
   });
 

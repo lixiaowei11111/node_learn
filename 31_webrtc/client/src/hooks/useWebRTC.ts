@@ -290,6 +290,13 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
               clientIP: msg.ip,
               error: null,
             }));
+
+            // 如果需要，可以将房间ID更新到URL中
+            if (msg.roomId && msg.roomId !== 'default') {
+              const url = new URL(window.location.href);
+              url.searchParams.set('room', msg.roomId);
+              window.history.replaceState({}, '', url.toString());
+            }
             break;
           }
 
@@ -328,7 +335,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
 
   // 连接到服务器
   const connect = useCallback(
-    async (name: string): Promise<void> => {
+    async (name: string, roomId?: string): Promise<void> => {
       return new Promise((resolve, reject) => {
         try {
           // 创建一个标志来跟踪这次连接尝试
@@ -337,9 +344,15 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
           wsRef.current = new WebSocket(config.serverUrl);
 
           wsRef.current.onopen = () => {
+            // 从URL参数获取房间ID，如果没有则使用传入的roomId
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlRoomId = urlParams.get('room');
+            const finalRoomId = urlRoomId || roomId || 'default';
+
             const message: RegisterMessage = {
               type: 'register',
               name: name,
+              roomId: finalRoomId,
             };
             wsRef.current!.send(JSON.stringify(message));
             initializePeerConnection();

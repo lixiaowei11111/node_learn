@@ -17,16 +17,18 @@ export class SignalingManager {
     name: string | undefined,
     ip: string,
     userAgent?: string,
-  ): { clientId: string; name: string; ip: string } {
-    const client = this.clientManager.registerClient(ws, name, ip, userAgent);
+    roomId?: string,
+  ): { clientId: string; name: string; ip: string; roomId: string } {
+    const client = this.clientManager.registerClient(ws, name, ip, userAgent, roomId);
 
-    // 广播客户端列表更新
-    this.broadcastClientList();
+    // 只向同房间客户端广播列表更新
+    this.broadcastClientListToRoom(client.roomId!);
 
     return {
       clientId: client.id,
       name: client.name,
       ip: client.ip,
+      roomId: client.roomId!,
     };
   }
 
@@ -34,10 +36,24 @@ export class SignalingManager {
    * 处理信令消息转发 (offer, answer, ice-candidate)
    */
   handleSignalingMessage(message: SignalingMessage): boolean {
+    const sourceClient = this.clientManager.getClient(message.fromId);
     const targetClient = this.clientManager.getClient(message.targetId);
+
+    if (!sourceClient) {
+      console.log(`Source client ${message.fromId} not found`);
+      return false;
+    }
 
     if (!targetClient) {
       console.log(`Target client ${message.targetId} not found`);
+      return false;
+    }
+
+    // 验证发送方和接收方是否在同一个房间
+    if (sourceClient.roomId !== targetClient.roomId) {
+      console.log(
+        `Room mismatch: source client in room ${sourceClient.roomId}, target client in room ${targetClient.roomId}`,
+      );
       return false;
     }
 
@@ -58,9 +74,13 @@ export class SignalingManager {
    * 处理客户端断开连接
    */
   handleDisconnect(clientId: string): boolean {
+    const client = this.clientManager.getClient(clientId);
+    const roomId = client?.roomId;
+
     const removed = this.clientManager.removeClient(clientId);
-    if (removed) {
-      this.broadcastClientList();
+    if (removed && roomId) {
+      // 只向该客户端所在的房间广播更新
+      this.broadcastClientListToRoom(roomId);
     }
     return removed;
   }
@@ -69,9 +89,19 @@ export class SignalingManager {
    * 处理WebSocket连接关闭
    */
   handleWebSocketClose(ws: WebSocket): void {
+    // 先获取客户端信息（包括房间ID）再删除
+    let roomId: string | undefined;
+    for (const client of this.clientManager.getAllClients()) {
+      if (client.ws === ws) {
+        roomId = client.roomId;
+        break;
+      }
+    }
+
     const clientId = this.clientManager.removeClientByWs(ws);
-    if (clientId) {
-      this.broadcastClientList();
+    if (clientId && roomId) {
+      // 只向该客户端所在的房间广播更新
+      this.broadcastClientListToRoom(roomId);
     }
   }
 
@@ -79,18 +109,31 @@ export class SignalingManager {
    * 广播客户端列表给所有连接的客户端
    */
   broadcastClientList(): void {
-    const clientList = this.clientManager.getAllClients().map((client) => ({
+    const roomIds = this.clientManager.getAllRoomIds();
+
+    // 为每个房间单独广播客户端列表
+    for (const roomId of roomIds) {
+      this.broadcastClientListToRoom(roomId);
+    }
+  }
+
+  /**
+   * 广播客户端列表给指定房间的客户端
+   */
+  broadcastClientListToRoom(roomId: string): void {
+    const roomClients = this.clientManager.getClientsByRoom(roomId);
+    const clientList = roomClients.map((client) => ({
       id: client.id,
       name: client.name,
       ip: client.ip,
     }));
+
     const message = JSON.stringify({
       type: 'client-list',
       clients: clientList,
     });
 
-    const allClients = this.clientManager.getAllClients();
-    for (const client of allClients) {
+    for (const client of roomClients) {
       if (client.ws.readyState === WebSocket.OPEN) {
         try {
           client.ws.send(message);
