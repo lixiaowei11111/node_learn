@@ -79,7 +79,11 @@ export class SignalingManager {
    * 广播客户端列表给所有连接的客户端
    */
   broadcastClientList(): void {
-    const clientList = this.clientManager.getClientList();
+    const clientList = this.clientManager.getAllClients().map((client) => ({
+      id: client.id,
+      name: client.name,
+      ip: client.ip,
+    }));
     const message = JSON.stringify({
       type: 'client-list',
       clients: clientList,

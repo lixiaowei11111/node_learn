@@ -4,7 +4,7 @@ import { WebSocket } from 'ws';
 import { ClientManager } from './clientManager';
 import { SignalingManager } from './signalingManager';
 import type { WebSocketMessage } from '../types/client';
-import { getClientIP } from '../utils/index';
+import { getClientIP, getWebSocketClientIP } from '../utils/index';
 
 /**
  * WebSocket连接管理器
@@ -112,7 +112,13 @@ export class WebSocketManager {
       return;
     }
 
-    const result = this.signalingManager.handleRegister(ws.raw, data.name, clientIP, userAgent);
+    // 尝试从WebSocket连接获取更准确的IP地址
+    const webSocketIP = getWebSocketClientIP(ws.raw);
+    const finalIP = webSocketIP !== 'unknown' ? webSocketIP : clientIP;
+
+    console.log(`Client registering - HTTP IP: ${clientIP}, WebSocket IP: ${webSocketIP}, Final IP: ${finalIP}`);
+
+    const result = this.signalingManager.handleRegister(ws.raw, data.name, finalIP, userAgent);
 
     // 发送注册成功消息
     ws.send(
