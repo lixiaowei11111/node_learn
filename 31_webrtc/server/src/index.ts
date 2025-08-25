@@ -1,12 +1,35 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { networkInterfaces } from 'os';
 
 // 导入业务模块
 import { WebSocketManager } from './services/webSocketManager';
 import { createClientRoutes } from './routes/clientRoutes';
 import { createWebRTCRoutes } from './routes/webrtcRoutes';
 import { createBaseRoutes } from './routes/baseRoutes';
+
+/**
+ * 获取本机网络IP地址
+ */
+function getNetworkIPs(): string[] {
+  const interfaces = networkInterfaces();
+  const ips: string[] = [];
+
+  for (const interfaceName in interfaces) {
+    const networkInterface = interfaces[interfaceName];
+    if (networkInterface) {
+      for (const net of networkInterface) {
+        // 跳过内部地址和IPv6地址
+        if (net.family === 'IPv4' && !net.internal) {
+          ips.push(net.address);
+        }
+      }
+    }
+  }
+
+  return ips;
+}
 
 /**
  * 创建和配置Hono应用
@@ -66,9 +89,28 @@ function startServer(): void {
   // 注入WebSocket支持
   webSocketManager.injectWebSocket(server);
 
+  // 获取网络IP地址
+  const networkIPs = getNetworkIPs();
+
   // 输出启动信息
-  console.log(`🚀 Signaling server is running on http://localhost:${port}`);
-  console.log(`🔌 WebSocket endpoint: ws://localhost:${port}/ws`);
+  console.log(`🚀 Signaling server is running at:`);
+  console.log(`   Loopback: http://localhost:${port}/`);
+
+  if (networkIPs.length > 0) {
+    networkIPs.forEach((ip) => {
+      console.log(`   On Your Network (IPv4): http://${ip}:${port}/`);
+    });
+  }
+
+  console.log(`🔌 WebSocket endpoints:`);
+  console.log(`   Loopback: ws://localhost:${port}/ws`);
+
+  if (networkIPs.length > 0) {
+    networkIPs.forEach((ip) => {
+      console.log(`   On Your Network (IPv4): ws://${ip}:${port}/ws`);
+    });
+  }
+
   console.log(`📡 Server accepting connections on all interfaces`);
 
   // 输出可用的API端点
