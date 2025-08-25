@@ -20,6 +20,34 @@ export const formatTimestamp = (timestamp: number): string => {
   });
 };
 
+export const formatSpeed = (bytesPerSecond: number): string => {
+  if (bytesPerSecond === 0) return '0 B/s';
+
+  const k = 1024;
+  const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+  const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
+
+  return (
+    parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  );
+};
+
+export const formatTime = (seconds: number): string => {
+  if (seconds === 0 || !isFinite(seconds)) return '--';
+
+  if (seconds < 60) {
+    return `${Math.round(seconds)}秒`;
+  } else if (seconds < 3600) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.round(seconds % 60);
+    return `${minutes}分${remainingSeconds}秒`;
+  } else {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}时${minutes}分`;
+  }
+};
+
 export const fileUtils = {
   clearFileInput: (inputRef: React.RefObject<HTMLInputElement>) => {
     if (inputRef.current) {

@@ -8,7 +8,12 @@ import {
 } from '@/components/ui/tooltip';
 import { Download, Trash2 } from 'lucide-react';
 import { FileTransfer } from '@/types/webRTC';
-import { formatFileSize, formatTimestamp } from '@/lib/formatters';
+import {
+  formatFileSize,
+  formatTimestamp,
+  formatSpeed,
+  formatTime,
+} from '@/lib/formatters';
 
 interface TransferItemProps {
   transfer: FileTransfer;
@@ -78,6 +83,19 @@ export function TransferItem({
             {formatFileSize(transfer.fileSize)} |{' '}
             {formatTimestamp(transfer.timestamp)}
           </p>
+          {transfer.status === 'transferring' && (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div className="flex justify-between">
+                <span>速度: {formatSpeed(transfer.speed)}</span>
+                <span>平均: {formatSpeed(transfer.avgSpeed)}</span>
+              </div>
+              {transfer.estimatedTimeRemaining && (
+                <div>
+                  剩余时间: {formatTime(transfer.estimatedTimeRemaining)}
+                </div>
+              )}
+            </div>
+          )}
           <Progress value={transfer.progress} className="h-2" />
           <div className="flex gap-2">
             {transfer.direction === 'receive' &&
@@ -130,6 +148,15 @@ export function TransferItem({
             大小: {formatFileSize(transfer.fileSize)} | 时间:{' '}
             {formatTimestamp(transfer.timestamp)}
           </p>
+          {transfer.status === 'transferring' && (
+            <div className="text-sm text-muted-foreground flex items-center gap-4">
+              <span>速度: {formatSpeed(transfer.speed)}</span>
+              <span>平均: {formatSpeed(transfer.avgSpeed)}</span>
+              {transfer.estimatedTimeRemaining && (
+                <span>剩余: {formatTime(transfer.estimatedTimeRemaining)}</span>
+              )}
+            </div>
+          )}
           <Progress value={transfer.progress} className="h-2" />
         </div>
         <div className="flex gap-2 ml-4">

@@ -20,6 +20,13 @@ export interface FileTransfer {
   status: 'pending' | 'transferring' | 'completed' | 'failed';
   direction: 'send' | 'receive';
   timestamp: number;
+  // 新增速度检测相关字段
+  startTime?: number;
+  lastUpdateTime?: number;
+  transferredBytes: number;
+  speed: number; // 当前传输速度 (bytes/second)
+  avgSpeed: number; // 平均传输速度 (bytes/second)
+  estimatedTimeRemaining?: number; // 预估剩余时间 (seconds)
 }
 
 export interface SignalingMessage {

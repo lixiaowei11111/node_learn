@@ -54,8 +54,9 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         const message = JSON.parse(data) as FileInfoMessage | FileChunkMessage;
 
         if (message.type === 'file-info') {
+          const now = Date.now();
           const transfer: FileTransfer = {
-            id: Date.now().toString(),
+            id: now.toString(),
             fileName: message.fileName,
             fileSize: message.fileSize,
             fileType: message.fileType,
@@ -65,7 +66,13 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
             progress: 0,
             status: 'transferring',
             direction: 'receive',
-            timestamp: Date.now(),
+            timestamp: now,
+            startTime: now,
+            lastUpdateTime: now,
+            transferredBytes: 0,
+            speed: 0,
+            avgSpeed: 0,
+            estimatedTimeRemaining: undefined,
           };
 
           currentTransferRef.current = transfer;
@@ -107,13 +114,51 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         transfer.chunks[chunkInfo.chunkIndex] = fileData;
         transfer.receivedChunks++;
 
+        // 计算传输速度
+        const now = Date.now();
+        const chunkSize = fileData.byteLength;
+        transfer.transferredBytes += chunkSize;
+
+        // 计算当前速度（每秒字节数）
+        const timeDiff =
+          (now - (transfer.lastUpdateTime || transfer.startTime || now)) / 1000;
+        if (timeDiff > 0) {
+          transfer.speed = chunkSize / timeDiff;
+        }
+
+        // 计算平均速度
+        const totalTimeDiff = (now - (transfer.startTime || now)) / 1000;
+        if (totalTimeDiff > 0) {
+          transfer.avgSpeed = transfer.transferredBytes / totalTimeDiff;
+        }
+
+        // 计算预估剩余时间
+        const remainingBytes = transfer.fileSize - transfer.transferredBytes;
+        if (transfer.avgSpeed > 0 && remainingBytes > 0) {
+          transfer.estimatedTimeRemaining = remainingBytes / transfer.avgSpeed;
+        }
+
+        transfer.lastUpdateTime = now;
+
         // 批量更新进度，减少重渲染
         const progress = (transfer.receivedChunks / transfer.totalChunks) * 100;
 
         // 使用 requestAnimationFrame 优化UI更新
         requestAnimationFrame(() => {
           setTransfers((prev) =>
-            prev.map((t) => (t.id === transfer.id ? { ...t, progress } : t)),
+            prev.map((t) =>
+              t.id === transfer.id
+                ? {
+                    ...t,
+                    progress,
+                    transferredBytes: transfer.transferredBytes,
+                    speed: transfer.speed,
+                    avgSpeed: transfer.avgSpeed,
+                    estimatedTimeRemaining: transfer.estimatedTimeRemaining,
+                    lastUpdateTime: transfer.lastUpdateTime,
+                  }
+                : t,
+            ),
           );
         });
 
@@ -506,6 +551,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       const transferId = Date.now().toString();
 
       // 添加发送记录
+      const now = Date.now();
       const transfer: FileTransfer = {
         id: transferId,
         fileName: file.name,
@@ -517,7 +563,13 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         progress: 0,
         status: 'transferring',
         direction: 'send',
-        timestamp: Date.now(),
+        timestamp: now,
+        startTime: now,
+        lastUpdateTime: now,
+        transferredBytes: 0,
+        speed: 0,
+        avgSpeed: 0,
+        estimatedTimeRemaining: undefined,
       };
 
       setTransfers((prev) => [...prev, transfer]);
@@ -537,6 +589,8 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       const MAX_BUFFER_SIZE = 1 * 1024 * 1024; // 1MB 缓冲区限制，更保守的设置
       let currentChunk = 0;
       let lastProgressUpdate = 0;
+      let transferredBytes = 0;
+      let lastSpeedUpdate = now;
 
       const sendNextChunk = async (): Promise<void> => {
         return new Promise((resolve, reject) => {
@@ -560,6 +614,32 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
               const chunk = file.slice(start, end);
               const buffer = await chunk.arrayBuffer();
 
+              // 计算传输速度
+              const currentTime = Date.now();
+              const chunkSize = buffer.byteLength;
+              transferredBytes += chunkSize;
+
+              // 计算当前速度（每秒字节数）
+              const timeDiff = (currentTime - lastSpeedUpdate) / 1000;
+              let currentSpeed = 0;
+              if (timeDiff > 0) {
+                currentSpeed = chunkSize / timeDiff;
+              }
+
+              // 计算平均速度
+              const totalTimeDiff = (currentTime - now) / 1000;
+              let avgSpeed = 0;
+              if (totalTimeDiff > 0) {
+                avgSpeed = transferredBytes / totalTimeDiff;
+              }
+
+              // 计算预估剩余时间
+              const remainingBytes = file.size - transferredBytes;
+              let estimatedTimeRemaining: number | undefined;
+              if (avgSpeed > 0 && remainingBytes > 0) {
+                estimatedTimeRemaining = remainingBytes / avgSpeed;
+              }
+
               // 合并消息头和数据，减少发送次数
               const chunkInfo = JSON.stringify({
                 type: 'file-chunk',
@@ -579,14 +659,27 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
               channel.send(combinedBuffer);
 
               // 优化的进度更新 - 减少频率和使用requestAnimationFrame
-              const now = Date.now();
-              if (now - lastProgressUpdate > 100 || i === totalChunks - 1) {
-                lastProgressUpdate = now;
+              if (
+                currentTime - lastProgressUpdate > 100 ||
+                i === totalChunks - 1
+              ) {
+                lastProgressUpdate = currentTime;
+                lastSpeedUpdate = currentTime;
                 requestAnimationFrame(() => {
                   const progress = ((i + 1) / totalChunks) * 100;
                   setTransfers((prev) =>
                     prev.map((t) =>
-                      t.id === transferId ? { ...t, progress } : t,
+                      t.id === transferId
+                        ? {
+                            ...t,
+                            progress,
+                            transferredBytes,
+                            speed: currentSpeed,
+                            avgSpeed,
+                            estimatedTimeRemaining,
+                            lastUpdateTime: currentTime,
+                          }
+                        : t,
                     ),
                   );
                 });

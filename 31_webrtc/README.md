@@ -2,6 +2,14 @@
 
 一个基于 WebRTC 技术的局域网文件传输解决方案，支持多设备间的实时文件传输。
 
+
+## webRTC调试
+
+浏览器 WebRTC 内部工具
+Chrome: chrome://webrtc-internals/
+Firefox: about:webrtc
+可以看到 DataChannel 状态、传输统计、连接质量等
+
 ## 🚀 快速开始
 
 ### 1. 启动服务器
