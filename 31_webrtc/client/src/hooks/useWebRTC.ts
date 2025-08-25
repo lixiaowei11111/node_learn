@@ -45,6 +45,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const currentTransferRef = useRef<Partial<FileTransfer> | null>(null);
   const currentTargetIdRef = useRef<string>('');
+  const clientIdRef = useRef<string>('');
 
   // 处理数据通道消息 - 优化版本
   const handleDataChannelMessage = useCallback((data: string | ArrayBuffer) => {
@@ -203,13 +204,22 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     });
 
     peerConnectionRef.current.onicecandidate = (event) => {
-      if (event.candidate && wsRef.current) {
+      if (
+        event.candidate &&
+        wsRef.current &&
+        clientIdRef.current &&
+        currentTargetIdRef.current
+      ) {
         const message: IceCandidateMessage = {
           type: 'ice-candidate',
           candidate: event.candidate,
-          fromId: connectionState.clientId,
+          fromId: clientIdRef.current,
           targetId: currentTargetIdRef.current,
         };
+        console.log(
+          `[Client] Sending ICE candidate to ${currentTargetIdRef.current}`,
+          message,
+        );
         wsRef.current.send(JSON.stringify(message));
       }
     };
@@ -227,29 +237,37 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
   }, [fetchICEServers, connectionState.clientId, setupDataChannel]);
 
   // 处理Offer
-  const handleOffer = useCallback(
-    async (data: OfferMessage) => {
-      if (!peerConnectionRef.current) return;
+  const handleOffer = useCallback(async (data: OfferMessage) => {
+    if (!peerConnectionRef.current) return;
 
-      try {
-        await peerConnectionRef.current.setRemoteDescription(data.offer);
-        const answer = await peerConnectionRef.current.createAnswer();
-        await peerConnectionRef.current.setLocalDescription(answer);
+    // 使用 ref 获取 clientId，确保立即可用
+    const clientId = clientIdRef.current;
+    if (!clientId) {
+      console.error('[Client] Cannot handle offer: clientId is not available');
+      return;
+    }
 
-        const message: AnswerMessage = {
-          type: 'answer',
-          answer: answer,
-          fromId: connectionState.clientId,
-          targetId: data.fromId,
-        };
+    try {
+      currentTargetIdRef.current = data.fromId; // 设置当前目标ID
 
-        wsRef.current?.send(JSON.stringify(message));
-      } catch (error) {
-        console.error('Error handling offer:', error);
-      }
-    },
-    [connectionState.clientId],
-  );
+      await peerConnectionRef.current.setRemoteDescription(data.offer);
+      const answer = await peerConnectionRef.current.createAnswer();
+      await peerConnectionRef.current.setLocalDescription(answer);
+
+      const message: AnswerMessage = {
+        type: 'answer',
+        answer: answer,
+        fromId: clientId,
+        targetId: data.fromId,
+      };
+
+      console.log(`[Client] Sending answer to ${data.fromId}`, message);
+      console.log(`[Client] My clientId: "${clientId}"`);
+      wsRef.current?.send(JSON.stringify(message));
+    } catch (error) {
+      console.error('Error handling offer:', error);
+    }
+  }, []);
 
   // 处理Answer
   const handleAnswer = useCallback(async (data: AnswerMessage) => {
@@ -282,6 +300,16 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         switch (data.type) {
           case 'registered': {
             const msg = data as RegisteredMessage;
+            console.log('Client registered successfully:', {
+              clientId: msg.clientId,
+              name: msg.name,
+              ip: msg.ip,
+              roomId: msg.roomId,
+            });
+
+            // 保存到 ref 中，确保立即可用
+            clientIdRef.current = msg.clientId;
+
             setConnectionState((prev) => ({
               ...prev,
               isConnected: true,
@@ -310,18 +338,21 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
 
           case 'offer': {
             const msg = data as OfferMessage;
+            console.log(`[Client] Received offer from ${msg.fromId}`);
             await handleOffer(msg);
             break;
           }
 
           case 'answer': {
             const msg = data as AnswerMessage;
+            console.log(`[Client] Received answer from ${msg.fromId}`);
             await handleAnswer(msg);
             break;
           }
 
           case 'ice-candidate': {
             const msg = data as IceCandidateMessage;
+            console.log(`[Client] Received ICE candidate from ${msg.fromId}`);
             await handleIceCandidate(msg);
             break;
           }
@@ -594,6 +625,8 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
   // 发送文件
   const sendFile = useCallback(
     async (targetId: string, file: File): Promise<void> => {
+      console.log(`[Client] Sending file "${file.name}" to ${targetId}`);
+
       if (!peerConnectionRef.current) {
         throw new Error('PeerConnection not initialized');
       }
@@ -601,6 +634,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       currentTargetIdRef.current = targetId;
 
       // 创建数据通道
+      console.log('[Client] Creating data channel...');
       dataChannelRef.current = peerConnectionRef.current.createDataChannel(
         'fileTransfer',
         {
@@ -611,16 +645,18 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       setupDataChannel(dataChannelRef.current);
 
       // 创建并发送offer
+      console.log('[Client] Creating offer...');
       const offer = await peerConnectionRef.current.createOffer();
       await peerConnectionRef.current.setLocalDescription(offer);
 
       const message: OfferMessage = {
         type: 'offer',
         offer: offer,
-        fromId: connectionState.clientId,
+        fromId: clientIdRef.current,
         targetId: targetId,
       };
 
+      console.log(`[Client] Sending offer to ${targetId}`, message);
       wsRef.current?.send(JSON.stringify(message));
 
       // 等待连接建立并传输文件
@@ -634,12 +670,13 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
 
         // 设置超时机制
         const timeout = setTimeout(() => {
+          console.error('[Client] Data channel connection timeout');
           reject(new Error('Data channel connection timeout'));
         }, 30000); // 30秒超时
 
         channel.onopen = async () => {
           clearTimeout(timeout);
-          console.log('Data channel opened, ready to transfer file');
+          console.log('[Client] Data channel opened, ready to transfer file');
 
           // 确保通道真正准备好
           if (channel.readyState === 'open') {
@@ -647,9 +684,10 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
               // 稍微延迟一下确保连接稳定
               await new Promise((resolve) => setTimeout(resolve, 100));
               await transferFile(file);
+              console.log('[Client] File transfer completed successfully');
               resolve();
             } catch (error) {
-              console.error('File transfer error:', error);
+              console.error('[Client] File transfer error:', error);
               reject(error);
             }
           } else {
@@ -663,23 +701,27 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
 
         channel.onerror = (error) => {
           clearTimeout(timeout);
-          console.error('Data channel error:', error);
+          console.error('[Client] Data channel error:', error);
           reject(error);
         };
 
         channel.onclose = () => {
           clearTimeout(timeout);
+          console.error('[Client] Data channel closed unexpectedly');
           reject(new Error('Data channel closed unexpectedly'));
         };
 
         // 如果通道已经打开，直接传输
         if (channel.readyState === 'open') {
           clearTimeout(timeout);
+          console.log(
+            '[Client] Data channel already open, starting transfer immediately',
+          );
           transferFile(file).then(resolve).catch(reject);
         }
       });
     },
-    [connectionState.clientId, setupDataChannel, transferFile],
+    [setupDataChannel, transferFile],
   );
 
   // 下载文件

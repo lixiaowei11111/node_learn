@@ -36,23 +36,35 @@ export class SignalingManager {
    * 处理信令消息转发 (offer, answer, ice-candidate)
    */
   handleSignalingMessage(message: SignalingMessage): boolean {
+    console.log(`[SignalingManager] Handling ${message.type} message from ${message.fromId} to ${message.targetId}`);
+
     const sourceClient = this.clientManager.getClient(message.fromId);
     const targetClient = this.clientManager.getClient(message.targetId);
 
     if (!sourceClient) {
-      console.log(`Source client ${message.fromId} not found`);
+      console.error(`[SignalingManager] Source client ${message.fromId} not found`);
       return false;
     }
 
     if (!targetClient) {
-      console.log(`Target client ${message.targetId} not found`);
+      console.error(`[SignalingManager] Target client ${message.targetId} not found`);
       return false;
     }
 
+    // 添加详细的调试信息
+    console.log(
+      `[SignalingManager] Source client room: "${sourceClient.roomId}", Target client room: "${targetClient.roomId}"`,
+    );
+    console.log(
+      `[SignalingManager] Room comparison: ${sourceClient.roomId} === ${targetClient.roomId} = ${
+        sourceClient.roomId === targetClient.roomId
+      }`,
+    );
+
     // 验证发送方和接收方是否在同一个房间
     if (sourceClient.roomId !== targetClient.roomId) {
-      console.log(
-        `Room mismatch: source client in room ${sourceClient.roomId}, target client in room ${targetClient.roomId}`,
+      console.error(
+        `[SignalingManager] Room mismatch: source client in room ${sourceClient.roomId}, target client in room ${targetClient.roomId}`,
       );
       return false;
     }
@@ -64,9 +76,15 @@ export class SignalingManager {
           fromId: message.fromId,
         }),
       );
+      console.log(
+        `[SignalingManager] Successfully forwarded ${message.type} message from ${message.fromId} to ${message.targetId}`,
+      );
       return true;
     }
 
+    console.error(
+      `[SignalingManager] Target client ${message.targetId} WebSocket not open, state: ${targetClient.ws.readyState}`,
+    );
     return false;
   }
 
