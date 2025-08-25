@@ -6,6 +6,8 @@ interface ControlPanelProps {
   connectionState: ConnectionState;
   displayClients: ExtendedClient[];
   selectedFile: File | null;
+  clientName: string;
+  onClientNameChange: (name: string) => void;
   onConnect: (clientName: string) => Promise<void>;
   onDisconnect: () => void;
   onSendFile: (targetId: string) => void;
@@ -15,6 +17,8 @@ export function ControlPanel({
   connectionState,
   displayClients,
   selectedFile,
+  clientName,
+  onClientNameChange,
   onConnect,
   onDisconnect,
   onSendFile,
@@ -23,6 +27,8 @@ export function ControlPanel({
     <div className="space-y-6">
       <ConnectionPanel
         connectionState={connectionState}
+        clientName={clientName}
+        onClientNameChange={onClientNameChange}
         onConnect={onConnect}
         onDisconnect={onDisconnect}
       />

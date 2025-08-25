@@ -7,16 +7,19 @@ import { ConnectionState } from '@/types/webRTC';
 
 interface ConnectionPanelProps {
   connectionState: ConnectionState;
+  clientName: string;
+  onClientNameChange: (name: string) => void;
   onConnect: (clientName: string) => Promise<void>;
   onDisconnect: () => void;
 }
 
 export function ConnectionPanel({
   connectionState,
+  clientName,
+  onClientNameChange,
   onConnect,
   onDisconnect,
 }: ConnectionPanelProps) {
-  const [clientName, setClientName] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -59,7 +62,7 @@ export function ConnectionPanel({
         <Input
           placeholder="输入客户端名称"
           value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
+          onChange={(e) => onClientNameChange(e.target.value)}
           disabled={connectionState.isConnected}
         />
         {!connectionState.isConnected ? (

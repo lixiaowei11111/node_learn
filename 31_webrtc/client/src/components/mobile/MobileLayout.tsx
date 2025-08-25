@@ -40,6 +40,7 @@ export function MobileLayout({
 }: MobileLayoutProps) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'settings'>('home');
+  const [clientName, setClientName] = useState('');
 
   const getTitle = () => {
     switch (activeTab) {
@@ -65,6 +66,8 @@ export function MobileLayout({
           connectionState={connectionState}
           displayClients={displayClients}
           selectedFile={selectedFile}
+          clientName={clientName}
+          onClientNameChange={setClientName}
           onConnect={onConnect}
           onDisconnect={onDisconnect}
           onSendFile={onSendFile}

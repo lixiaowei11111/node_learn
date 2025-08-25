@@ -40,6 +40,7 @@ export function DesktopLayout({
   onClearTransfers,
 }: DesktopLayoutProps) {
   const [activeTab, setActiveTab] = useState<'home' | 'settings'>('home');
+  const [clientName, setClientName] = useState('');
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,6 +67,8 @@ export function DesktopLayout({
             connectionState={connectionState}
             displayClients={displayClients}
             selectedFile={selectedFile}
+            clientName={clientName}
+            onClientNameChange={setClientName}
             onConnect={onConnect}
             onDisconnect={onDisconnect}
             onSendFile={onSendFile}
