@@ -1,18 +1,20 @@
 import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { formatFileSize } from '@/lib/formatters';
 
 interface FileUploadProps {
   selectedFile: File | null;
   onFileSelect: (file: File) => void;
+  onFileClear?: () => void;
   isMobile?: boolean;
 }
 
 export function FileUpload({
   selectedFile,
   onFileSelect,
+  onFileClear,
   isMobile = false,
 }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +28,14 @@ export function FileUpload({
 
   const handleClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleClearFile = () => {
+    // 清空 input 的值，释放文件引用
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    onFileClear?.();
   };
 
   return (
@@ -61,7 +71,17 @@ export function FileUpload({
               className={`rounded-lg ${isMobile ? 'p-3 bg-muted' : 'p-4 bg-muted'}`}
             >
               <div className="space-y-2">
-                <p className="font-medium">已选择文件：</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">已选择文件：</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleClearFile}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
                 <p
                   className={`text-muted-foreground ${isMobile ? 'text-sm break-all' : 'text-sm'}`}
                 >

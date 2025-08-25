@@ -15,6 +15,7 @@ interface DesktopLayoutProps {
   selectedFile: File | null;
   transfers: FileTransfer[];
   onFileSelect: (file: File) => void;
+  onFileClear: () => void;
   onConnect: (clientName: string) => Promise<void>;
   onDisconnect: () => void;
   onSendFile: (targetId: string) => void;
@@ -29,6 +30,7 @@ export function DesktopLayout({
   selectedFile,
   transfers,
   onFileSelect,
+  onFileClear,
   onConnect,
   onDisconnect,
   onSendFile,
@@ -102,6 +104,7 @@ export function DesktopLayout({
                 <FileUpload
                   selectedFile={selectedFile}
                   onFileSelect={onFileSelect}
+                  onFileClear={onFileClear}
                   isMobile={false}
                 />
 

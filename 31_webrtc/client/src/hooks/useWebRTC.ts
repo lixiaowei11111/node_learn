@@ -689,19 +689,52 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+
+      // 立即释放 URL 对象
       URL.revokeObjectURL(url);
+
+      // 可选：下载后自动清理文件块数据以释放内存
+      setTimeout(() => {
+        setTransfers((prev) =>
+          prev.map((t) =>
+            t.id === transferId
+              ? { ...t, chunks: [] } // 清空文件块数据
+              : t,
+          ),
+        );
+      }, 1000); // 延迟1秒确保下载完成
     },
     [transfers],
   );
 
   // 清除所有传输记录
   const clearTransfers = useCallback(() => {
-    setTransfers([]);
+    setTransfers((prev) => {
+      // 清理所有文件块数据以释放内存
+      prev.forEach((transfer) => {
+        if (transfer.chunks && transfer.chunks.length > 0) {
+          transfer.chunks.length = 0;
+        }
+      });
+      return [];
+    });
   }, []);
 
   // 移除单个传输记录
   const removeTransfer = useCallback((transferId: string) => {
-    setTransfers((prev) => prev.filter((t) => t.id !== transferId));
+    setTransfers((prev) => {
+      const updatedTransfers = prev.filter((t) => {
+        if (t.id === transferId) {
+          // 清理文件块数据以释放内存
+          if (t.chunks && t.chunks.length > 0) {
+            t.chunks.length = 0; // 清空数组
+          }
+          return false;
+        }
+        return true;
+      });
+      return updatedTransfers;
+    });
   }, []);
 
   // 清理副作用

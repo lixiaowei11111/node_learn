@@ -71,6 +71,11 @@ function App() {
     setSelectedFile(file);
   }, []);
 
+  // 处理文件清除
+  const handleFileClear = useCallback(() => {
+    setSelectedFile(null);
+  }, []);
+
   // 处理发送文件
   const handleSendFile = useCallback(
     async (targetId: string) => {
@@ -82,6 +87,7 @@ function App() {
       try {
         await sendFile(targetId, selectedFile);
         toast.success('文件发送完成');
+        // 发送完成后自动清除文件选择，释放引用
         setSelectedFile(null);
       } catch (error) {
         toast.error('文件发送失败');
@@ -128,6 +134,7 @@ function App() {
     selectedFile,
     transfers,
     onFileSelect: handleFileSelect,
+    onFileClear: handleFileClear,
     onConnect: handleConnect,
     onDisconnect: handleDisconnect,
     onSendFile: handleSendFile,
