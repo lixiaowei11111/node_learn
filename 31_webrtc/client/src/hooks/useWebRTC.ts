@@ -297,6 +297,9 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     async (name: string): Promise<void> => {
       return new Promise((resolve, reject) => {
         try {
+          // 创建一个标志来跟踪这次连接尝试
+          let connectionResolved = false;
+
           wsRef.current = new WebSocket(config.serverUrl);
 
           wsRef.current.onopen = () => {
@@ -308,17 +311,43 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
             initializePeerConnection();
           };
 
-          wsRef.current.onmessage = handleWebSocketMessage;
+          // 修改消息处理逻辑，直接监听 registered 消息
+          wsRef.current.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data) as SignalingMessage;
+
+              // 如果收到注册成功消息且还没有解析，则解析 Promise
+              if (data.type === 'registered' && !connectionResolved) {
+                connectionResolved = true;
+                resolve();
+              }
+
+              // 继续处理其他消息
+              handleWebSocketMessage(event);
+            } catch (error) {
+              console.error(
+                'Error handling WebSocket message in connect:',
+                error,
+              );
+            }
+          };
 
           wsRef.current.onerror = (error) => {
-            setConnectionState((prev) => ({
-              ...prev,
-              error: 'WebSocket连接错误',
-            }));
-            reject(error);
+            if (!connectionResolved) {
+              connectionResolved = true;
+              setConnectionState((prev) => ({
+                ...prev,
+                error: 'WebSocket连接错误',
+              }));
+              reject(error);
+            }
           };
 
           wsRef.current.onclose = () => {
+            if (!connectionResolved) {
+              connectionResolved = true;
+              reject(new Error('WebSocket连接关闭'));
+            }
             setConnectionState((prev) => ({
               ...prev,
               isConnected: false,
@@ -326,30 +355,30 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
             }));
           };
 
-          // 监听连接状态变化来resolve Promise
-          const checkConnection = () => {
-            if (connectionState.isConnected) {
-              resolve();
-            } else {
-              setTimeout(checkConnection, 100);
+          // 设置超时
+          setTimeout(() => {
+            if (!connectionResolved) {
+              connectionResolved = true;
+              reject(new Error('连接超时'));
             }
-          };
-          setTimeout(checkConnection, 100);
+          }, 10000); // 10秒超时
         } catch (error) {
           reject(error);
         }
       });
     },
-    [
-      config.serverUrl,
-      handleWebSocketMessage,
-      initializePeerConnection,
-      connectionState.isConnected,
-    ],
+    [config.serverUrl, handleWebSocketMessage, initializePeerConnection],
   );
 
   // 断开连接
   const disconnect = useCallback(() => {
+    // 立即设置断开状态，避免UI卡顿
+    setConnectionState((prev) => ({
+      ...prev,
+      isConnected: false,
+      error: null,
+    }));
+
     if (dataChannelRef.current) {
       dataChannelRef.current.close();
       dataChannelRef.current = null;
@@ -365,15 +394,18 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       wsRef.current = null;
     }
 
-    setConnectionState({
-      isConnected: false,
-      clientId: '',
-      clientName: '',
-      error: null,
-    });
-
-    setClients([]);
-    currentTransferRef.current = null;
+    // 清理其他状态
+    setTimeout(() => {
+      setConnectionState({
+        isConnected: false,
+        clientId: '',
+        clientName: '',
+        clientIP: '',
+        error: null,
+      });
+      setClients([]);
+      currentTransferRef.current = null;
+    }, 0);
   }, []);
 
   // 传输文件 - 优化版本
