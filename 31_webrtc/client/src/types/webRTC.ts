@@ -13,7 +13,8 @@ export interface FileTransfer {
   fileName: string;
   fileSize: number;
   fileType: string;
-  chunks: ArrayBuffer[];
+  // 移除内存中的 chunks 数组，改用 IndexedDB 存储
+  // chunks: ArrayBuffer[];
   receivedChunks: number;
   totalChunks: number;
   progress: number;
@@ -27,6 +28,8 @@ export interface FileTransfer {
   speed: number; // 当前传输速度 (bytes/second)
   avgSpeed: number; // 平均传输速度 (bytes/second)
   estimatedTimeRemaining?: number; // 预估剩余时间 (seconds)
+  // 新增：是否使用优化存储
+  useOptimizedStorage?: boolean;
 }
 
 export interface SignalingMessage {

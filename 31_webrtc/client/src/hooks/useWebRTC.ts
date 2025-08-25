@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from '../lib/toast';
+import { FileStorageService } from '../services/fileStorageService';
 import {
   Client,
   FileTransfer,
@@ -47,139 +48,171 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
   const currentTargetIdRef = useRef<string>('');
   const clientIdRef = useRef<string>('');
 
-  // 处理数据通道消息 - 优化版本
-  const handleDataChannelMessage = useCallback((data: string | ArrayBuffer) => {
-    if (typeof data === 'string') {
-      try {
-        const message = JSON.parse(data) as FileInfoMessage | FileChunkMessage;
+  // 文件存储服务
+  const fileStorage = useRef<FileStorageService>(
+    FileStorageService.getInstance(),
+  );
 
-        if (message.type === 'file-info') {
-          const now = Date.now();
-          const transfer: FileTransfer = {
-            id: now.toString(),
-            fileName: message.fileName,
-            fileSize: message.fileSize,
-            fileType: message.fileType,
-            chunks: new Array(message.totalChunks),
-            receivedChunks: 0,
-            totalChunks: message.totalChunks,
-            progress: 0,
-            status: 'transferring',
-            direction: 'receive',
-            timestamp: now,
-            startTime: now,
-            lastUpdateTime: now,
-            transferredBytes: 0,
-            speed: 0,
-            avgSpeed: 0,
-            estimatedTimeRemaining: undefined,
-          };
+  // 初始化文件存储服务
+  useEffect(() => {
+    fileStorage.current.initialize().catch(console.error);
+  }, []);
 
-          currentTransferRef.current = transfer;
-          setTransfers((prev) => [...prev, transfer]);
+  // 处理数据通道消息 - 优化版本（使用 IndexedDB）
+  const handleDataChannelMessage = useCallback(
+    async (data: string | ArrayBuffer) => {
+      if (typeof data === 'string') {
+        try {
+          const message = JSON.parse(data) as
+            | FileInfoMessage
+            | FileChunkMessage;
+
+          if (message.type === 'file-info') {
+            const now = Date.now();
+            const transfer: FileTransfer = {
+              id: now.toString(),
+              fileName: message.fileName,
+              fileSize: message.fileSize,
+              fileType: message.fileType,
+              // chunks: new Array(message.totalChunks), // 移除内存存储
+              receivedChunks: 0,
+              totalChunks: message.totalChunks,
+              progress: 0,
+              status: 'transferring',
+              direction: 'receive',
+              timestamp: now,
+              startTime: now,
+              lastUpdateTime: now,
+              transferredBytes: 0,
+              speed: 0,
+              avgSpeed: 0,
+              estimatedTimeRemaining: undefined,
+              useOptimizedStorage: true,
+            };
+
+            currentTransferRef.current = transfer;
+            setTransfers((prev) => [...prev, transfer]);
+          }
+        } catch (error) {
+          console.error('Error parsing data channel message:', error);
         }
-      } catch (error) {
-        console.error('Error parsing data channel message:', error);
-      }
-    } else if (data instanceof ArrayBuffer && currentTransferRef.current) {
-      // 处理合并的消息头和文件块数据
-      const transfer = currentTransferRef.current as FileTransfer;
+      } else if (data instanceof ArrayBuffer && currentTransferRef.current) {
+        // 处理合并的消息头和文件块数据
+        const transfer = currentTransferRef.current as FileTransfer;
 
-      try {
-        // 查找换行符分隔头部和数据
-        const dataView = new Uint8Array(data);
-        let headerEnd = -1;
-        for (let i = 0; i < Math.min(dataView.length, 1000); i++) {
-          if (dataView[i] === 10) {
-            // '\n' 的ASCII码
-            headerEnd = i;
-            break;
+        try {
+          // 查找换行符分隔头部和数据
+          const dataView = new Uint8Array(data);
+          let headerEnd = -1;
+          for (let i = 0; i < Math.min(dataView.length, 1000); i++) {
+            if (dataView[i] === 10) {
+              // '\n' 的ASCII码
+              headerEnd = i;
+              break;
+            }
+          }
+
+          if (headerEnd === -1) {
+            console.error('无法找到消息头分隔符');
+            return;
+          }
+
+          // 解析头部信息
+          const headerBuffer = data.slice(0, headerEnd);
+          const headerText = new TextDecoder().decode(headerBuffer);
+          const chunkInfo = JSON.parse(headerText) as FileChunkMessage;
+
+          // 提取实际文件数据
+          const fileData = data.slice(headerEnd + 1);
+
+          // 使用 IndexedDB 存储块数据，而不是内存
+          await fileStorage.current.storeChunk(
+            transfer.id,
+            chunkInfo.chunkIndex,
+            fileData,
+          );
+          transfer.receivedChunks++;
+
+          // 计算传输速度
+          const now = Date.now();
+          const chunkSize = fileData.byteLength;
+          transfer.transferredBytes += chunkSize;
+
+          // 计算当前速度（每秒字节数）
+          const timeDiff =
+            (now - (transfer.lastUpdateTime || transfer.startTime || now)) /
+            1000;
+          if (timeDiff > 0) {
+            transfer.speed = chunkSize / timeDiff;
+          }
+
+          // 计算平均速度
+          const totalTimeDiff = (now - (transfer.startTime || now)) / 1000;
+          if (totalTimeDiff > 0) {
+            transfer.avgSpeed = transfer.transferredBytes / totalTimeDiff;
+          }
+
+          // 计算预估剩余时间
+          const remainingBytes = transfer.fileSize - transfer.transferredBytes;
+          if (transfer.avgSpeed > 0 && remainingBytes > 0) {
+            transfer.estimatedTimeRemaining =
+              remainingBytes / transfer.avgSpeed;
+          }
+
+          transfer.lastUpdateTime = now;
+
+          // 批量更新进度，减少重渲染
+          const progress =
+            (transfer.receivedChunks / transfer.totalChunks) * 100;
+
+          // 使用 requestAnimationFrame 优化UI更新
+          requestAnimationFrame(() => {
+            setTransfers((prev) =>
+              prev.map((t) =>
+                t.id === transfer.id
+                  ? {
+                      ...t,
+                      progress,
+                      transferredBytes: transfer.transferredBytes,
+                      speed: transfer.speed,
+                      avgSpeed: transfer.avgSpeed,
+                      estimatedTimeRemaining: transfer.estimatedTimeRemaining,
+                      lastUpdateTime: transfer.lastUpdateTime,
+                    }
+                  : t,
+              ),
+            );
+          });
+
+          // 检查是否接收完成
+          if (transfer.receivedChunks === transfer.totalChunks) {
+            transfer.status = 'completed';
+            setTransfers((prev) =>
+              prev.map((t) =>
+                t.id === transfer.id
+                  ? { ...t, status: 'completed', progress: 100 }
+                  : t,
+              ),
+            );
+            toast.success(`文件接收完成: ${transfer.fileName}`);
+            currentTransferRef.current = null;
+          }
+        } catch (error) {
+          console.error('Error processing file chunk:', error);
+          // 如果存储失败，将传输标记为失败
+          if (currentTransferRef.current) {
+            const transfer = currentTransferRef.current as FileTransfer;
+            setTransfers((prev) =>
+              prev.map((t) =>
+                t.id === transfer.id ? { ...t, status: 'failed' } : t,
+              ),
+            );
           }
         }
-
-        if (headerEnd === -1) {
-          console.error('无法找到消息头分隔符');
-          return;
-        }
-
-        // 解析头部信息
-        const headerBuffer = data.slice(0, headerEnd);
-        const headerText = new TextDecoder().decode(headerBuffer);
-        const chunkInfo = JSON.parse(headerText) as FileChunkMessage;
-
-        // 提取实际文件数据
-        const fileData = data.slice(headerEnd + 1);
-
-        // 存储块数据
-        transfer.chunks[chunkInfo.chunkIndex] = fileData;
-        transfer.receivedChunks++;
-
-        // 计算传输速度
-        const now = Date.now();
-        const chunkSize = fileData.byteLength;
-        transfer.transferredBytes += chunkSize;
-
-        // 计算当前速度（每秒字节数）
-        const timeDiff =
-          (now - (transfer.lastUpdateTime || transfer.startTime || now)) / 1000;
-        if (timeDiff > 0) {
-          transfer.speed = chunkSize / timeDiff;
-        }
-
-        // 计算平均速度
-        const totalTimeDiff = (now - (transfer.startTime || now)) / 1000;
-        if (totalTimeDiff > 0) {
-          transfer.avgSpeed = transfer.transferredBytes / totalTimeDiff;
-        }
-
-        // 计算预估剩余时间
-        const remainingBytes = transfer.fileSize - transfer.transferredBytes;
-        if (transfer.avgSpeed > 0 && remainingBytes > 0) {
-          transfer.estimatedTimeRemaining = remainingBytes / transfer.avgSpeed;
-        }
-
-        transfer.lastUpdateTime = now;
-
-        // 批量更新进度，减少重渲染
-        const progress = (transfer.receivedChunks / transfer.totalChunks) * 100;
-
-        // 使用 requestAnimationFrame 优化UI更新
-        requestAnimationFrame(() => {
-          setTransfers((prev) =>
-            prev.map((t) =>
-              t.id === transfer.id
-                ? {
-                    ...t,
-                    progress,
-                    transferredBytes: transfer.transferredBytes,
-                    speed: transfer.speed,
-                    avgSpeed: transfer.avgSpeed,
-                    estimatedTimeRemaining: transfer.estimatedTimeRemaining,
-                    lastUpdateTime: transfer.lastUpdateTime,
-                  }
-                : t,
-            ),
-          );
-        });
-
-        // 检查是否接收完成
-        if (transfer.receivedChunks === transfer.totalChunks) {
-          transfer.status = 'completed';
-          setTransfers((prev) =>
-            prev.map((t) =>
-              t.id === transfer.id
-                ? { ...t, status: 'completed', progress: 100 }
-                : t,
-            ),
-          );
-          toast.success(`文件接收完成: ${transfer.fileName}`);
-          currentTransferRef.current = null;
-        }
-      } catch (error) {
-        console.error('Error processing file chunk:', error);
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
   // 设置数据通道
   const setupDataChannel = useCallback(
@@ -557,7 +590,6 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
-        chunks: [],
         receivedChunks: 0,
         totalChunks: totalChunks,
         progress: 0,
@@ -570,6 +602,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         speed: 0,
         avgSpeed: 0,
         estimatedTimeRemaining: undefined,
+        useOptimizedStorage: true,
       };
 
       setTransfers((prev) => [...prev, transfer]);
@@ -817,9 +850,9 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     [setupDataChannel, transferFile],
   );
 
-  // 下载文件
+  // 下载文件 - 使用 IndexedDB
   const downloadFile = useCallback(
-    (transferId: string) => {
+    async (transferId: string) => {
       const transfer = transfers.find((t) => t.id === transferId);
       if (
         !transfer ||
@@ -829,59 +862,50 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         return;
       }
 
-      const blob = new Blob(transfer.chunks, { type: transfer.fileType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = transfer.fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      // 立即释放 URL 对象
-      URL.revokeObjectURL(url);
-
-      // 可选：下载后自动清理文件块数据以释放内存
-      setTimeout(() => {
-        setTransfers((prev) =>
-          prev.map((t) =>
-            t.id === transferId
-              ? { ...t, chunks: [] } // 清空文件块数据
-              : t,
-          ),
+      try {
+        // 从 IndexedDB 组装文件
+        const blob = await fileStorage.current.assembleFile(
+          transferId,
+          transfer.totalChunks,
+          transfer.fileType,
         );
-      }, 1000); // 延迟1秒确保下载完成
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = transfer.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // 立即释放 URL 对象
+        URL.revokeObjectURL(url);
+
+        toast.success(`文件下载完成: ${transfer.fileName}`);
+      } catch (error) {
+        console.error('Error downloading file:', error);
+        toast.error('文件下载失败，请重试');
+      }
     },
     [transfers],
   );
 
   // 清除所有传输记录
   const clearTransfers = useCallback(() => {
-    setTransfers((prev) => {
-      // 清理所有文件块数据以释放内存
-      prev.forEach((transfer) => {
-        if (transfer.chunks && transfer.chunks.length > 0) {
-          transfer.chunks.length = 0;
-        }
-      });
-      return [];
-    });
+    setTransfers([]);
   }, []);
 
   // 移除单个传输记录
-  const removeTransfer = useCallback((transferId: string) => {
+  const removeTransfer = useCallback(async (transferId: string) => {
+    // 从 IndexedDB 删除相关数据
+    try {
+      await fileStorage.current.deleteTransfer(transferId);
+    } catch (error) {
+      console.error('Error deleting transfer from storage:', error);
+    }
+
     setTransfers((prev) => {
-      const updatedTransfers = prev.filter((t) => {
-        if (t.id === transferId) {
-          // 清理文件块数据以释放内存
-          if (t.chunks && t.chunks.length > 0) {
-            t.chunks.length = 0; // 清空数组
-          }
-          return false;
-        }
-        return true;
-      });
-      return updatedTransfers;
+      return prev.filter((t) => t.id !== transferId);
     });
   }, []);
 
