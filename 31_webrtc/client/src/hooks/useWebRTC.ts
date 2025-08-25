@@ -850,7 +850,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     [setupDataChannel, transferFile],
   );
 
-  // 下载文件 - 使用 IndexedDB（带进度提示）
+  // 下载文件 - 使用 IndexedDB（带进度面板）
   const downloadFile = useCallback(
     async (transferId: string) => {
       const transfer = transfers.find((t) => t.id === transferId);
@@ -863,23 +863,39 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       }
 
       try {
-        // 显示准备下载的提示
-        toast.success(`正在准备下载文件: ${transfer.fileName}`);
+        // 设置组装状态
+        setTransfers((prev) =>
+          prev.map((t) =>
+            t.id === transferId
+              ? { ...t, status: 'assembling', assemblingProgress: 0 }
+              : t,
+          ),
+        );
 
         // 从 IndexedDB 组装文件（带进度回调）
-        let lastProgressToast = 0;
         const blob = await fileStorage.current.assembleFileWithProgress(
           transferId,
           transfer.totalChunks,
           transfer.fileType,
           (progress: number) => {
-            // 每20%显示一次进度提示，避免过于频繁
-            const roundedProgress = Math.round(progress / 20) * 20;
-            if (roundedProgress > lastProgressToast && roundedProgress < 100) {
-              lastProgressToast = roundedProgress;
-              toast.success(`正在组装文件: ${roundedProgress}%`);
-            }
+            // 更新组装进度
+            setTransfers((prev) =>
+              prev.map((t) =>
+                t.id === transferId
+                  ? { ...t, assemblingProgress: progress }
+                  : t,
+              ),
+            );
           },
+        );
+
+        // 组装完成，恢复完成状态
+        setTransfers((prev) =>
+          prev.map((t) =>
+            t.id === transferId
+              ? { ...t, status: 'completed', assemblingProgress: 100 }
+              : t,
+          ),
         );
 
         // 创建下载链接
@@ -900,6 +916,16 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         toast.success(`文件下载开始: ${transfer.fileName}`);
       } catch (error) {
         console.error('Error downloading file:', error);
+
+        // 出错时恢复完成状态
+        setTransfers((prev) =>
+          prev.map((t) =>
+            t.id === transferId
+              ? { ...t, status: 'completed', assemblingProgress: undefined }
+              : t,
+          ),
+        );
+
         toast.error(
           `文件下载失败: ${error instanceof Error ? error.message : '未知错误'}`,
         );

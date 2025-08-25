@@ -35,6 +35,7 @@ export function TransferItem({
       case 'completed':
         return 'default';
       case 'transferring':
+      case 'assembling':
         return 'secondary';
       case 'failed':
         return 'destructive';
@@ -49,6 +50,8 @@ export function TransferItem({
         return '完成';
       case 'transferring':
         return '传输中';
+      case 'assembling':
+        return '组装中';
       case 'failed':
         return '失败';
       case 'pending':
@@ -57,6 +60,25 @@ export function TransferItem({
         return '未知';
     }
   };
+
+  // 根据状态决定显示什么进度和信息
+  const getProgressInfo = () => {
+    if (transfer.status === 'assembling') {
+      return {
+        progress: transfer.assemblingProgress || 0,
+        showSpeed: false,
+        extraInfo: `正在组装文件块: ${transfer.assemblingProgress?.toFixed(1) || 0}%`,
+      };
+    } else {
+      return {
+        progress: transfer.progress,
+        showSpeed: transfer.status === 'transferring',
+        extraInfo: null,
+      };
+    }
+  };
+
+  const progressInfo = getProgressInfo();
 
   if (isMobile) {
     return (
@@ -83,7 +105,7 @@ export function TransferItem({
             {formatFileSize(transfer.fileSize)} |{' '}
             {formatTimestamp(transfer.timestamp)}
           </p>
-          {transfer.status === 'transferring' && (
+          {progressInfo.showSpeed && (
             <div className="text-xs text-muted-foreground space-y-1">
               <div className="flex justify-between">
                 <span>速度: {formatSpeed(transfer.speed)}</span>
@@ -96,7 +118,12 @@ export function TransferItem({
               )}
             </div>
           )}
-          <Progress value={transfer.progress} className="h-2" />
+          {progressInfo.extraInfo && (
+            <div className="text-xs text-muted-foreground">
+              {progressInfo.extraInfo}
+            </div>
+          )}
+          <Progress value={progressInfo.progress} className="h-2" />
           <div className="flex gap-2">
             {transfer.direction === 'receive' &&
               transfer.status === 'completed' && (
@@ -148,7 +175,7 @@ export function TransferItem({
             大小: {formatFileSize(transfer.fileSize)} | 时间:{' '}
             {formatTimestamp(transfer.timestamp)}
           </p>
-          {transfer.status === 'transferring' && (
+          {progressInfo.showSpeed && (
             <div className="text-sm text-muted-foreground flex items-center gap-4">
               <span>速度: {formatSpeed(transfer.speed)}</span>
               <span>平均: {formatSpeed(transfer.avgSpeed)}</span>
@@ -157,7 +184,12 @@ export function TransferItem({
               )}
             </div>
           )}
-          <Progress value={transfer.progress} className="h-2" />
+          {progressInfo.extraInfo && (
+            <div className="text-sm text-muted-foreground">
+              {progressInfo.extraInfo}
+            </div>
+          )}
+          <Progress value={progressInfo.progress} className="h-2" />
         </div>
         <div className="flex gap-2 ml-4">
           {transfer.direction === 'receive' &&

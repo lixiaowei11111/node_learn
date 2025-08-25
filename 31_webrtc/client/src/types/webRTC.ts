@@ -18,7 +18,7 @@ export interface FileTransfer {
   receivedChunks: number;
   totalChunks: number;
   progress: number;
-  status: 'pending' | 'transferring' | 'completed' | 'failed';
+  status: 'pending' | 'transferring' | 'completed' | 'failed' | 'assembling';
   direction: 'send' | 'receive';
   timestamp: number;
   // 新增速度检测相关字段
@@ -30,6 +30,8 @@ export interface FileTransfer {
   estimatedTimeRemaining?: number; // 预估剩余时间 (seconds)
   // 新增：是否使用优化存储
   useOptimizedStorage?: boolean;
+  // 新增：组装进度（0-100）
+  assemblingProgress?: number;
 }
 
 export interface SignalingMessage {
