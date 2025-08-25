@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { message } from 'antd';
+import { toast } from '../lib/toast';
 import {
   Client,
   FileTransfer,
@@ -125,7 +125,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
                 : t,
             ),
           );
-          message.success(`文件接收完成: ${transfer.fileName}`);
+          toast.success(`文件接收完成: ${transfer.fileName}`);
           currentTransferRef.current = null;
         }
       } catch (error) {

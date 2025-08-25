@@ -1,46 +1,60 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
-  Layout,
-  Card,
-  Button,
-  Upload,
-  List,
-  Progress,
-  Input,
-  message,
-  Space,
-  Tag,
-  Typography,
   Tooltip,
-  Popconfirm,
-  Drawer,
-  Row,
-  Col,
-} from 'antd';
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
-  UploadOutlined,
-  DownloadOutlined,
-  UserOutlined,
-  WifiOutlined,
-  DisconnectOutlined,
-  DeleteOutlined,
-  ClearOutlined,
-  MenuOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Upload,
+  Download,
+  User,
+  Wifi,
+  WifiOff,
+  Trash2,
+  X,
+  Menu,
+  Users,
+  FileText,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
+import { Toaster } from 'sonner';
+import { toast } from '@/lib/toast';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useMobile, mobileUtils } from './hooks/useMobile';
 import { FileTransfer, ExtendedClient } from './types/webRTC';
-import './App.css';
-import './mobile.css';
-
-const { Header, Content } = Layout;
-const { Title, Text } = Typography;
 
 function App() {
   const [clientName, setClientName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const mobileInfo = useMobile();
   const { isMobile, isIOS } = mobileInfo;
@@ -79,45 +93,56 @@ function App() {
 
   const handleConnect = useCallback(async () => {
     if (!clientName.trim()) {
-      message.error('请输入客户端名称');
+      toast.error('请输入客户端名称');
       return;
     }
 
+    setIsConnecting(true);
     try {
       await connect(clientName);
-      message.success('连接成功');
+      toast.success('连接成功');
     } catch (error) {
-      message.error('连接失败');
+      toast.error('连接失败');
       console.error(error);
+    } finally {
+      setIsConnecting(false);
     }
   }, [clientName, connect]);
 
   const handleDisconnect = useCallback(() => {
     disconnect();
-    message.info('已断开连接');
+    toast.info('已断开连接');
   }, [disconnect]);
 
-  const handleFileSelect = useCallback((file: File) => {
-    setSelectedFile(file);
-    return false; // 阻止自动上传
-  }, []);
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file) {
+        setSelectedFile(file);
+      }
+    },
+    [],
+  );
 
   const handleSendFile = useCallback(
     async (targetId: string) => {
       if (!selectedFile) {
-        message.error('请先选择文件');
+        toast.error('请先选择文件');
         return;
       }
 
       try {
         await sendFile(targetId, selectedFile);
-        message.success('文件发送完成');
+        toast.success('文件发送完成');
         setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
         if (isMobile) {
           setDrawerVisible(false);
         }
       } catch (error) {
-        message.error('文件发送失败');
+        toast.error('文件发送失败');
         console.error(error);
       }
     },
@@ -132,16 +157,18 @@ function App() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getStatusColor = (status: FileTransfer['status']): string => {
+  const getStatusVariant = (
+    status: FileTransfer['status'],
+  ): 'default' | 'secondary' | 'destructive' => {
     switch (status) {
       case 'completed':
-        return 'success';
-      case 'transferring':
-        return 'processing';
-      case 'failed':
-        return 'error';
-      default:
         return 'default';
+      case 'transferring':
+        return 'secondary';
+      case 'failed':
+        return 'destructive';
+      default:
+        return 'secondary';
     }
   };
 
@@ -159,36 +186,6 @@ function App() {
         return '未知';
     }
   };
-
-  // 优化客户端名称输入处理
-  const handleClientNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setClientName(e.target.value);
-    },
-    [],
-  );
-
-  // 稳定的样式对象，避免重复创建
-  const connectionCardStyle = useMemo(() => ({ width: '100%' }), []);
-  const clientItemStyle = useMemo(
-    () => ({
-      width: '100%',
-    }),
-    [],
-  );
-  const clientNameStyle = useMemo(
-    () => ({
-      fontSize: isMobile ? '14px' : '16px',
-    }),
-    [isMobile],
-  );
-  const clientIdStyle = useMemo(() => ({ fontSize: '12px' }), []);
-  const clientListPadding = useMemo(
-    () => ({
-      padding: isMobile ? '8px 0' : '16px 0',
-    }),
-    [isMobile],
-  );
 
   // 生成显示用的客户端列表，包含本设备
   const displayClients = useMemo((): ExtendedClient[] => {
@@ -221,469 +218,514 @@ function App() {
     connectionState.clientIP,
   ]);
 
-  // 控制面板组件 - 使用 useMemo 优化，避免组件重新创建
+  // 控制面板组件
   const controlPanelContent = useMemo(
     () => (
-      <Space direction="vertical" style={connectionCardStyle} size="middle">
-        <Card title="连接设置" size={isMobile ? 'small' : 'default'}>
-          <Space direction="vertical" style={connectionCardStyle}>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              连接设置
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <Input
               placeholder="输入客户端名称"
               value={clientName}
-              onChange={handleClientNameChange}
-              prefix={<UserOutlined />}
+              onChange={(e) => setClientName(e.target.value)}
               disabled={connectionState.isConnected}
-              size={isMobile ? 'large' : 'middle'}
             />
             {!connectionState.isConnected ? (
               <Button
-                type="primary"
                 onClick={handleConnect}
-                block
-                loading={false}
-                size={isMobile ? 'large' : 'middle'}
+                disabled={isConnecting}
+                className="w-full"
               >
+                {isConnecting && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
                 连接服务器
               </Button>
             ) : (
               <Button
                 onClick={handleDisconnect}
-                block
-                danger
-                size={isMobile ? 'large' : 'middle'}
+                variant="destructive"
+                className="w-full"
               >
                 断开连接
               </Button>
             )}
-          </Space>
+          </CardContent>
         </Card>
 
         {connectionState.isConnected && (
-          <Card
-            title={
-              <Space>
-                <TeamOutlined />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
                 设备列表 ({displayClients.length})
-              </Space>
-            }
-            size={isMobile ? 'small' : 'default'}
-          >
-            <List
-              size="small"
-              dataSource={displayClients}
-              renderItem={(client) => {
-                const isCurrentDevice = client.isCurrentDevice ?? false;
-                return (
-                  <List.Item style={clientListPadding}>
-                    <div style={clientItemStyle}>
-                      <div style={{ marginBottom: 8 }}>
-                        <Space>
-                          <Text strong style={clientNameStyle}>
-                            {client.name}
-                          </Text>
-                          {isCurrentDevice && <Tag color="blue">本设备</Tag>}
-                        </Space>
-                        <br />
-                        <Text type="secondary" style={clientIdStyle}>
-                          {client.id.substring(0, 8)}...
-                        </Text>
-                        {client.ip && (
-                          <>
-                            <br />
-                            <Text type="secondary" style={clientIdStyle}>
-                              IP: {client.ip}
-                            </Text>
-                          </>
-                        )}
-                      </div>
-                      <Button
-                        size={isMobile ? 'large' : 'small'}
-                        type={isCurrentDevice ? 'default' : 'primary'}
-                        onClick={() => handleSendFile(client.id)}
-                        disabled={!selectedFile || isCurrentDevice}
-                        block
-                        title={
-                          isCurrentDevice ? '不能向自己发送文件' : '发送文件'
-                        }
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {displayClients.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">
+                  暂无其他客户端在线
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {displayClients.map((client) => {
+                    const isCurrentDevice = client.isCurrentDevice ?? false;
+                    return (
+                      <div
+                        key={client.id}
+                        className="p-3 rounded-lg border bg-card"
                       >
-                        {isCurrentDevice ? '本设备' : '发送文件'}
-                      </Button>
-                    </div>
-                  </List.Item>
-                );
-              }}
-              locale={{ emptyText: '暂无其他客户端在线' }}
-            />
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{client.name}</span>
+                            {isCurrentDevice && <Badge>本设备</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {client.id.substring(0, 8)}...
+                          </p>
+                          {client.ip && (
+                            <p className="text-xs text-muted-foreground">
+                              IP: {client.ip}
+                            </p>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendFile(client.id)}
+                            disabled={!selectedFile || isCurrentDevice}
+                            className="w-full"
+                            variant={isCurrentDevice ? 'secondary' : 'default'}
+                          >
+                            {isCurrentDevice ? '本设备' : '发送文件'}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
           </Card>
         )}
-      </Space>
+      </div>
     ),
     [
-      connectionCardStyle,
-      isMobile,
       clientName,
-      handleClientNameChange,
       connectionState.isConnected,
+      isConnecting,
       handleConnect,
       handleDisconnect,
       displayClients,
       handleSendFile,
       selectedFile,
-      clientItemStyle,
-      clientNameStyle,
-      clientIdStyle,
-      clientListPadding,
     ],
   );
 
   // 移动端布局
   if (isMobile) {
     return (
-      <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-        <Header
-          style={{
-            background: '#001529',
-            padding: '0 16px',
-            position: 'sticky',
-            top: 0,
-            zIndex: 1000,
-          }}
-        >
-          <Row align="middle" justify="space-between">
-            <Col>
-              <Space>
-                <Button
-                  type="text"
-                  icon={<MenuOutlined />}
-                  onClick={() => setDrawerVisible(true)}
-                  style={{ color: 'white' }}
-                  size="large"
-                />
-                <Title
-                  level={4}
-                  style={{
-                    color: 'white',
-                    margin: 0,
-                    fontSize: '16px',
-                  }}
-                >
-                  文件传输
-                </Title>
-              </Space>
-            </Col>
-            <Col>
-              {connectionState.isConnected ? (
-                <Tag icon={<WifiOutlined />} color="success">
-                  {displayClients.length - 1}
-                </Tag>
-              ) : (
-                <Tag icon={<DisconnectOutlined />} color="default">
-                  离线
-                </Tag>
-              )}
-            </Col>
-          </Row>
-        </Header>
+      <TooltipProvider>
+        <div className="min-h-screen bg-background">
+          {/* Header */}
+          <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-14 items-center justify-between px-4">
+              <div className="flex items-center gap-2">
+                <Sheet open={drawerVisible} onOpenChange={setDrawerVisible}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="w-4 h-4" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-80">
+                    <SheetHeader>
+                      <SheetTitle>控制面板</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6">{controlPanelContent}</div>
+                  </SheetContent>
+                </Sheet>
+                <h1 className="text-lg font-semibold">文件传输</h1>
+              </div>
+              <div>
+                {connectionState.isConnected ? (
+                  <Badge variant="default" className="gap-1">
+                    <Wifi className="w-3 h-3" />
+                    {displayClients.length - 1}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="gap-1">
+                    <WifiOff className="w-3 h-3" />
+                    离线
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </header>
 
-        <Content style={{ padding: '16px' }}>
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            <Card title="文件选择" size="small">
-              <Upload
-                beforeUpload={handleFileSelect}
-                showUploadList={false}
-                accept="*/*"
-              >
-                <Button
-                  icon={<UploadOutlined />}
-                  block
-                  size="large"
-                  type="dashed"
-                >
-                  选择文件
-                </Button>
-              </Upload>
-              {selectedFile && (
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: 12,
-                    background: '#f5f5f5',
-                    borderRadius: 6,
-                    fontSize: '14px',
-                  }}
-                >
-                  <Text strong>已选择文件：</Text>
-                  <br />
-                  <Text ellipsis>名称：{selectedFile.name}</Text>
-                  <br />
-                  <Text>大小：{formatFileSize(selectedFile.size)}</Text>
+          {/* Content */}
+          <main className="container px-4 py-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  文件选择
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="w-full h-20 border-dashed"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-6 h-6" />
+                      <span>选择文件</span>
+                    </div>
+                  </Button>
+                  {selectedFile && (
+                    <div className="p-3 rounded-lg bg-muted">
+                      <div className="space-y-1">
+                        <p className="font-medium">已选择文件：</p>
+                        <p className="text-sm text-muted-foreground break-all">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatFileSize(selectedFile.size)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </CardContent>
             </Card>
 
-            <Card
-              title="传输记录"
-              size="small"
-              extra={
-                transfers.length > 0 && (
-                  <Popconfirm
-                    title="确定要清除所有传输记录吗？"
-                    onConfirm={clearTransfers}
-                  >
-                    <Button icon={<ClearOutlined />} size="small" type="text">
-                      清除
-                    </Button>
-                  </Popconfirm>
-                )
-              }
-            >
-              <List
-                dataSource={transfers}
-                renderItem={(transfer) => (
-                  <List.Item
-                    style={{ padding: '12px 0' }}
-                    actions={[
-                      transfer.direction === 'receive' &&
-                      transfer.status === 'completed' ? (
-                        <Button
-                          icon={<DownloadOutlined />}
-                          onClick={() => downloadFile(transfer.id)}
-                          size="small"
-                          type="primary"
-                        />
-                      ) : null,
-                      <Button
-                        icon={<DeleteOutlined />}
-                        onClick={() => removeTransfer(transfer.id)}
-                        size="small"
-                        type="text"
-                        danger
-                      />,
-                    ].filter(Boolean)}
-                  >
-                    <List.Item.Meta
-                      title={
-                        <div style={{ fontSize: '14px' }}>
-                          <Text ellipsis style={{ maxWidth: '200px' }}>
-                            {transfer.fileName}
-                          </Text>
-                          <div style={{ marginTop: 4 }}>
-                            <Tag
-                              color={
-                                transfer.direction === 'send' ? 'blue' : 'green'
-                              }
-                            >
-                              {transfer.direction === 'send' ? '发送' : '接收'}
-                            </Tag>
-                            <Tag color={getStatusColor(transfer.status)}>
-                              {getStatusText(transfer.status)}
-                            </Tag>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    传输记录
+                  </span>
+                  {transfers.length > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>确认清除</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            确定要清除所有传输记录吗？此操作无法撤销。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction onClick={clearTransfers}>
+                            确认清除
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transfers.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    暂无传输记录
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {transfers.map((transfer) => (
+                      <div
+                        key={transfer.id}
+                        className="p-3 rounded-lg border bg-card"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium truncate flex-1">
+                              {transfer.fileName}
+                            </span>
+                            <div className="flex gap-1 ml-2">
+                              <Badge
+                                variant={
+                                  transfer.direction === 'send'
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                              >
+                                {transfer.direction === 'send'
+                                  ? '发送'
+                                  : '接收'}
+                              </Badge>
+                              <Badge
+                                variant={getStatusVariant(transfer.status)}
+                              >
+                                {getStatusText(transfer.status)}
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
-                      }
-                      description={
-                        <div style={{ fontSize: '12px' }}>
-                          <Text type="secondary">
+                          <p className="text-xs text-muted-foreground">
                             {formatFileSize(transfer.fileSize)} |{' '}
                             {new Date(transfer.timestamp).toLocaleTimeString()}
-                          </Text>
-                          <div style={{ marginTop: 8 }}>
-                            <Progress
-                              percent={Math.round(transfer.progress)}
-                              size="small"
-                              status={
-                                transfer.status === 'failed'
-                                  ? 'exception'
-                                  : transfer.status === 'completed'
-                                    ? 'success'
-                                    : 'active'
+                          </p>
+                          <Progress value={transfer.progress} className="h-2" />
+                          <div className="flex gap-2">
+                            {transfer.direction === 'receive' &&
+                              transfer.status === 'completed' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => downloadFile(transfer.id)}
+                                  className="flex-1"
+                                >
+                                  <Download className="w-4 h-4 mr-1" />
+                                  下载
+                                </Button>
+                              )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => removeTransfer(transfer.id)}
+                              className={
+                                transfer.direction === 'receive' &&
+                                transfer.status === 'completed'
+                                  ? ''
+                                  : 'flex-1'
                               }
-                            />
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              删除
+                            </Button>
                           </div>
                         </div>
-                      }
-                    />
-                  </List.Item>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                locale={{ emptyText: '暂无传输记录' }}
-              />
+              </CardContent>
             </Card>
-          </Space>
-        </Content>
-
-        <Drawer
-          title="控制面板"
-          placement="left"
-          onClose={() => setDrawerVisible(false)}
-          open={drawerVisible}
-          width={280}
-        >
-          {controlPanelContent}
-        </Drawer>
-      </Layout>
+          </main>
+        </div>
+        <Toaster />
+      </TooltipProvider>
     );
   }
 
   // 桌面端布局
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ background: '#001529', padding: '0 24px' }}>
-        <Row align="middle" justify="space-between">
-          <Col>
-            <Title level={3} style={{ color: 'white', margin: 0 }}>
-              局域网文件传输
-            </Title>
-          </Col>
-          <Col>
-            <Space>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container flex h-16 items-center justify-between px-6">
+            <h1 className="text-2xl font-bold">局域网文件传输</h1>
+            <div className="flex items-center gap-4">
               {connectionState.isConnected ? (
-                <Tag icon={<WifiOutlined />} color="success">
+                <Badge variant="default" className="gap-1">
+                  <Wifi className="w-4 h-4" />
                   已连接 ({displayClients.length - 1} 个其他客户端在线)
-                </Tag>
+                </Badge>
               ) : (
-                <Tag icon={<DisconnectOutlined />} color="default">
+                <Badge variant="secondary" className="gap-1">
+                  <WifiOff className="w-4 h-4" />
                   未连接
-                </Tag>
+                </Badge>
               )}
               {connectionState.error && (
-                <Tag color="error">{connectionState.error}</Tag>
+                <Alert className="w-auto">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{connectionState.error}</AlertDescription>
+                </Alert>
               )}
-            </Space>
-          </Col>
-        </Row>
-      </Header>
+            </div>
+          </div>
+        </header>
 
-      <Layout>
-        <Layout.Sider
-          width={320}
-          style={{ background: '#fff', padding: '24px' }}
-        >
-          {controlPanelContent}
-        </Layout.Sider>
+        <div className="flex">
+          {/* Sidebar */}
+          <aside className="w-80 border-r bg-muted/30 p-6">
+            {controlPanelContent}
+          </aside>
 
-        <Content style={{ padding: '24px' }}>
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
-            <Card title="文件选择">
-              <Upload
-                beforeUpload={handleFileSelect}
-                showUploadList={false}
-                accept="*/*"
-              >
-                <Button icon={<UploadOutlined />}>选择文件</Button>
-              </Upload>
-              {selectedFile && (
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: 16,
-                    background: '#f5f5f5',
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text strong>已选择文件：</Text>
-                  <br />
-                  <Text>名称：{selectedFile.name}</Text>
-                  <br />
-                  <Text>大小：{formatFileSize(selectedFile.size)}</Text>
-                  <br />
-                  <Text>类型：{selectedFile.type || '未知'}</Text>
+          {/* Main Content */}
+          <main className="flex-1 p-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  文件选择
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="h-32 border-dashed border-2 w-full"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-8 h-8" />
+                      <span>选择文件</span>
+                    </div>
+                  </Button>
+                  {selectedFile && (
+                    <div className="p-4 rounded-lg bg-muted">
+                      <div className="space-y-2">
+                        <p className="font-medium">已选择文件：</p>
+                        <p className="text-sm text-muted-foreground">
+                          名称：{selectedFile.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          大小：{formatFileSize(selectedFile.size)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          类型：{selectedFile.type || '未知'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </CardContent>
             </Card>
 
-            <Card
-              title="传输记录"
-              extra={
-                transfers.length > 0 && (
-                  <Space>
-                    <Popconfirm
-                      title="确定要清除所有传输记录吗？"
-                      onConfirm={clearTransfers}
-                    >
-                      <Button icon={<ClearOutlined />} size="small" type="text">
-                        清除所有
-                      </Button>
-                    </Popconfirm>
-                  </Space>
-                )
-              }
-            >
-              <List
-                dataSource={transfers}
-                renderItem={(transfer) => (
-                  <List.Item
-                    actions={[
-                      transfer.direction === 'receive' &&
-                      transfer.status === 'completed' ? (
-                        <Tooltip title="下载文件">
-                          <Button
-                            icon={<DownloadOutlined />}
-                            onClick={() => downloadFile(transfer.id)}
-                            size="small"
-                            type="primary"
-                          >
-                            下载
-                          </Button>
-                        </Tooltip>
-                      ) : null,
-                      <Tooltip title="删除记录">
-                        <Button
-                          icon={<DeleteOutlined />}
-                          onClick={() => removeTransfer(transfer.id)}
-                          size="small"
-                          type="text"
-                          danger
-                        />
-                      </Tooltip>,
-                    ].filter(Boolean)}
-                  >
-                    <List.Item.Meta
-                      title={
-                        <Space>
-                          <Text>{transfer.fileName}</Text>
-                          <Tag
-                            color={
-                              transfer.direction === 'send' ? 'blue' : 'green'
-                            }
-                          >
-                            {transfer.direction === 'send' ? '发送' : '接收'}
-                          </Tag>
-                          <Tag color={getStatusColor(transfer.status)}>
-                            {getStatusText(transfer.status)}
-                          </Tag>
-                        </Space>
-                      }
-                      description={
-                        <div>
-                          <Text type="secondary">
-                            大小: {formatFileSize(transfer.fileSize)} | 时间:{' '}
-                            {new Date(transfer.timestamp).toLocaleTimeString()}
-                          </Text>
-                          <div style={{ marginTop: 8 }}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    传输记录
+                  </span>
+                  {transfers.length > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <X className="w-4 h-4 mr-2" />
+                          清除所有
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>确认清除</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            确定要清除所有传输记录吗？此操作无法撤销。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction onClick={clearTransfers}>
+                            确认清除
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transfers.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    暂无传输记录
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {transfers.map((transfer) => (
+                      <div
+                        key={transfer.id}
+                        className="p-4 rounded-lg border bg-card"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">
+                                {transfer.fileName}
+                              </span>
+                              <Badge
+                                variant={
+                                  transfer.direction === 'send'
+                                    ? 'default'
+                                    : 'secondary'
+                                }
+                              >
+                                {transfer.direction === 'send'
+                                  ? '发送'
+                                  : '接收'}
+                              </Badge>
+                              <Badge
+                                variant={getStatusVariant(transfer.status)}
+                              >
+                                {getStatusText(transfer.status)}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              大小: {formatFileSize(transfer.fileSize)} | 时间:{' '}
+                              {new Date(
+                                transfer.timestamp,
+                              ).toLocaleTimeString()}
+                            </p>
                             <Progress
-                              percent={Math.round(transfer.progress)}
-                              size="small"
-                              status={
-                                transfer.status === 'failed'
-                                  ? 'exception'
-                                  : transfer.status === 'completed'
-                                    ? 'success'
-                                    : 'active'
-                              }
+                              value={transfer.progress}
+                              className="h-2"
                             />
                           </div>
+                          <div className="flex gap-2 ml-4">
+                            {transfer.direction === 'receive' &&
+                              transfer.status === 'completed' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => downloadFile(transfer.id)}
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>下载文件</TooltipContent>
+                                </Tooltip>
+                              )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => removeTransfer(transfer.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>删除记录</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
-                      }
-                    />
-                  </List.Item>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                locale={{ emptyText: '暂无传输记录' }}
-              />
+              </CardContent>
             </Card>
-          </Space>
-        </Content>
-      </Layout>
-    </Layout>
+          </main>
+        </div>
+      </div>
+      <Toaster />
+    </TooltipProvider>
   );
 }
 

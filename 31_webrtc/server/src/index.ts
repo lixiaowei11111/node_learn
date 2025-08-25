@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server';
 import { createNodeWebSocket } from '@hono/node-ws';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
@@ -29,7 +29,7 @@ app.use(
 );
 
 // 获取客户端真实IP地址的函数
-function getClientIP(c: any): string {
+function getClientIP(c: Context): string {
   // 检查各种可能包含真实IP的头部
   const forwarded = c.req.header('x-forwarded-for');
   const realIP = c.req.header('x-real-ip');

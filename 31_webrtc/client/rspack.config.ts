@@ -1,7 +1,12 @@
 import { defineConfig } from '@rspack/cli';
 import { rspack } from '@rspack/core';
-import { ReactRefreshRspackPlugin } from '@rspack/plugin-react-refresh';
+import ReactRefreshRspackPlugin from '@rspack/plugin-react-refresh';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+// Fix for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === 'development';
 
 // Target browsers, see: https://github.com/browserslist/browserslist
@@ -13,12 +18,20 @@ export default defineConfig({
   },
   resolve: {
     extensions: ['...', '.ts', '.tsx', '.jsx'],
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
   },
   module: {
     rules: [
       {
         test: /\.svg$/,
         type: 'asset',
+      },
+      {
+        test: /\.css$/,
+        use: ['postcss-loader'],
+        type: 'css',
       },
       {
         test: /\.(jsx?|tsx?)$/,
