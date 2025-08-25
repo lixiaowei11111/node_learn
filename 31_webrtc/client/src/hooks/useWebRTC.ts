@@ -850,7 +850,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     [setupDataChannel, transferFile],
   );
 
-  // 下载文件 - 使用 IndexedDB
+  // 下载文件 - 使用 IndexedDB（带进度提示）
   const downloadFile = useCallback(
     async (transferId: string) => {
       const transfer = transfers.find((t) => t.id === transferId);
@@ -863,28 +863,46 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       }
 
       try {
-        // 从 IndexedDB 组装文件
-        const blob = await fileStorage.current.assembleFile(
+        // 显示准备下载的提示
+        toast.success(`正在准备下载文件: ${transfer.fileName}`);
+
+        // 从 IndexedDB 组装文件（带进度回调）
+        let lastProgressToast = 0;
+        const blob = await fileStorage.current.assembleFileWithProgress(
           transferId,
           transfer.totalChunks,
           transfer.fileType,
+          (progress: number) => {
+            // 每20%显示一次进度提示，避免过于频繁
+            const roundedProgress = Math.round(progress / 20) * 20;
+            if (roundedProgress > lastProgressToast && roundedProgress < 100) {
+              lastProgressToast = roundedProgress;
+              toast.success(`正在组装文件: ${roundedProgress}%`);
+            }
+          },
         );
 
+        // 创建下载链接
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = transfer.fileName;
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
-        // 立即释放 URL 对象
-        URL.revokeObjectURL(url);
+        // 延迟释放 URL 对象，确保下载开始
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+        }, 1000);
 
-        toast.success(`文件下载完成: ${transfer.fileName}`);
+        toast.success(`文件下载开始: ${transfer.fileName}`);
       } catch (error) {
         console.error('Error downloading file:', error);
-        toast.error('文件下载失败，请重试');
+        toast.error(
+          `文件下载失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        );
       }
     },
     [transfers],

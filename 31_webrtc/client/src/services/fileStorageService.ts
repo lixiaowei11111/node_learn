@@ -109,6 +109,16 @@ export class FileStorageService {
     totalChunks: number,
     fileType: string,
   ): Promise<Blob> {
+    return this.assembleFileWithProgress(transferId, totalChunks, fileType);
+  }
+
+  // 获取所有文件块并组装成 Blob（带进度回调）
+  async assembleFileWithProgress(
+    transferId: string,
+    totalChunks: number,
+    fileType: string,
+    onProgress?: (progress: number) => void,
+  ): Promise<Blob> {
     if (!this.db) await this.initialize();
 
     const chunks: ArrayBuffer[] = [];
@@ -119,6 +129,18 @@ export class FileStorageService {
         throw new Error(`Missing chunk ${i} for transfer ${transferId}`);
       }
       chunks.push(chunk);
+
+      // 报告进度
+      if (onProgress) {
+        const progress = ((i + 1) / totalChunks) * 100;
+        onProgress(progress);
+      }
+
+      // 给UI一个更新的机会，避免阻塞主线程
+      if (i % 10 === 0) {
+        // 每10个块让出一次控制权
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
     }
 
     return new Blob(chunks, { type: fileType });
