@@ -98,6 +98,19 @@ export interface UseWebRTCOptions {
   serverUrl?: string;
   iceServers?: RTCIceServer[];
   chunkSize?: number;
+  autoFetchICEServers?: boolean; // 是否自动从服务器获取 ICE 服务器配置
+}
+
+export interface ICEServerConfig {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+  credentialType?: 'password' | 'oauth';
+}
+
+export interface WebRTCConfig {
+  iceServers: ICEServerConfig[];
+  timestamp: string;
 }
 
 export interface UseWebRTCReturn {

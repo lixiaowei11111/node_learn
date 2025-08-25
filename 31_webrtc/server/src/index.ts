@@ -4,6 +4,8 @@ import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
+import { iceServerManager } from './services/iceServerManager.js';
+import { getICEServers, getConfig, updateConfig, addPresetServers, testICEServers } from './routes/iceConfig.js';
 
 interface Client {
   id: string;
@@ -216,6 +218,22 @@ app.get('/clients/:id', (c) => {
     connected: client.connected,
     lastSeen: new Date(client.lastSeen).toISOString(),
     userAgent: client.userAgent,
+  });
+});
+
+// ICE 服务器管理 API 路由
+app.get('/api/ice-servers', getICEServers);
+app.get('/api/ice-config', getConfig);
+app.post('/api/ice-config', updateConfig);
+app.post('/api/ice-servers/preset', addPresetServers);
+app.get('/api/ice-servers/test', testICEServers);
+
+// 特殊路由：为客户端提供 ICE 服务器配置
+app.get('/api/webrtc-config', (c) => {
+  const iceServers = iceServerManager.getICEServers();
+  return c.json({
+    iceServers,
+    timestamp: new Date().toISOString(),
   });
 });
 

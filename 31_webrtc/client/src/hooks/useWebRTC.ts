@@ -21,6 +21,7 @@ const DEFAULT_OPTIONS: Required<UseWebRTCOptions> = {
   serverUrl: 'ws://localhost:3000/ws',
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
   chunkSize: 65536, // 64KB - 更稳定的块大小，避免缓冲区问题
+  autoFetchICEServers: true, // 默认自动从服务器获取 ICE 服务器配置
 };
 
 export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
@@ -158,14 +159,47 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     [handleDataChannelMessage],
   );
 
+  // 从服务器获取 ICE 服务器配置
+  const fetchICEServers = useCallback(async (): Promise<RTCIceServer[]> => {
+    if (!config.autoFetchICEServers) {
+      return config.iceServers;
+    }
+
+    try {
+      const serverBaseUrl = config.serverUrl
+        .replace('ws://', 'http://')
+        .replace('wss://', 'https://')
+        .replace('/ws', '');
+      const response = await fetch(`${serverBaseUrl}/api/webrtc-config`);
+
+      if (!response.ok) {
+        console.warn(
+          'Failed to fetch ICE servers from server, using default config',
+        );
+        return config.iceServers;
+      }
+
+      const data = await response.json();
+      console.log('Fetched ICE servers from server:', data.iceServers);
+
+      return data.iceServers || config.iceServers;
+    } catch (error) {
+      console.warn('Error fetching ICE servers from server:', error);
+      return config.iceServers;
+    }
+  }, [config.autoFetchICEServers, config.iceServers, config.serverUrl]);
+
   // 初始化PeerConnection
-  const initializePeerConnection = useCallback(() => {
+  const initializePeerConnection = useCallback(async () => {
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
     }
 
+    // 获取最新的 ICE 服务器配置
+    const iceServers = await fetchICEServers();
+
     peerConnectionRef.current = new RTCPeerConnection({
-      iceServers: config.iceServers,
+      iceServers: iceServers,
     });
 
     peerConnectionRef.current.onicecandidate = (event) => {
@@ -190,7 +224,7 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         peerConnectionRef.current?.connectionState,
       );
     };
-  }, [config.iceServers, connectionState.clientId, setupDataChannel]);
+  }, [fetchICEServers, connectionState.clientId, setupDataChannel]);
 
   // 处理Offer
   const handleOffer = useCallback(
