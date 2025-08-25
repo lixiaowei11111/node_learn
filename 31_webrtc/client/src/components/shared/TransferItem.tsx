@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, Pause, Play, X } from 'lucide-react';
 import { FileTransfer } from '@/types/webRTC';
 import {
   formatFileSize,
@@ -19,6 +19,9 @@ interface TransferItemProps {
   transfer: FileTransfer;
   onDownload: (transferId: string) => void;
   onRemove: (transferId: string) => void;
+  onPause?: (transferId: string) => void;
+  onResume?: (transferId: string) => void;
+  onCancel?: (transferId: string) => void;
   isMobile?: boolean;
 }
 
@@ -26,6 +29,9 @@ export function TransferItem({
   transfer,
   onDownload,
   onRemove,
+  onPause,
+  onResume,
+  onCancel,
   isMobile = false,
 }: TransferItemProps) {
   const getStatusVariant = (
@@ -125,6 +131,47 @@ export function TransferItem({
           )}
           <Progress value={progressInfo.progress} className="h-2" />
           <div className="flex gap-2">
+            {/* 传输中或暂停时显示暂停/恢复按钮 */}
+            {(transfer.status === 'transferring' ||
+              transfer.status === 'paused') && (
+              <>
+                {transfer.status === 'transferring' && onPause && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onPause(transfer.id)}
+                    className="flex-1"
+                  >
+                    <Pause className="w-4 h-4 mr-1" />
+                    暂停
+                  </Button>
+                )}
+                {transfer.status === 'paused' && onResume && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onResume(transfer.id)}
+                    className="flex-1"
+                  >
+                    <Play className="w-4 h-4 mr-1" />
+                    恢复
+                  </Button>
+                )}
+                {onCancel && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => onCancel(transfer.id)}
+                    className="flex-1"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    取消
+                  </Button>
+                )}
+              </>
+            )}
+
+            {/* 完成状态下显示下载按钮 */}
             {transfer.direction === 'receive' &&
               transfer.status === 'completed' && (
                 <Button
@@ -136,20 +183,26 @@ export function TransferItem({
                   下载
                 </Button>
               )}
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => onRemove(transfer.id)}
-              className={
-                transfer.direction === 'receive' &&
-                transfer.status === 'completed'
-                  ? ''
-                  : 'flex-1'
-              }
-            >
-              <Trash2 className="w-4 h-4 mr-1" />
-              删除
-            </Button>
+
+            {/* 删除按钮 - 只在非传输状态下显示 */}
+            {!(
+              transfer.status === 'transferring' || transfer.status === 'paused'
+            ) && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => onRemove(transfer.id)}
+                className={
+                  transfer.direction === 'receive' &&
+                  transfer.status === 'completed'
+                    ? ''
+                    : 'flex-1'
+                }
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                删除
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -192,6 +245,56 @@ export function TransferItem({
           <Progress value={progressInfo.progress} className="h-2" />
         </div>
         <div className="flex gap-2 ml-4">
+          {/* 传输中或暂停时显示暂停/恢复按钮 */}
+          {(transfer.status === 'transferring' ||
+            transfer.status === 'paused') && (
+            <>
+              {transfer.status === 'transferring' && onPause && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onPause(transfer.id)}
+                    >
+                      <Pause className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>暂停传输</TooltipContent>
+                </Tooltip>
+              )}
+              {transfer.status === 'paused' && onResume && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onResume(transfer.id)}
+                    >
+                      <Play className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>恢复传输</TooltipContent>
+                </Tooltip>
+              )}
+              {onCancel && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => onCancel(transfer.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>取消传输</TooltipContent>
+                </Tooltip>
+              )}
+            </>
+          )}
+
+          {/* 完成状态下显示下载按钮 */}
           {transfer.direction === 'receive' &&
             transfer.status === 'completed' && (
               <Tooltip>
@@ -203,18 +306,24 @@ export function TransferItem({
                 <TooltipContent>下载文件</TooltipContent>
               </Tooltip>
             )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => onRemove(transfer.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>删除记录</TooltipContent>
-          </Tooltip>
+
+          {/* 删除按钮 - 只在非传输状态下显示 */}
+          {!(
+            transfer.status === 'transferring' || transfer.status === 'paused'
+          ) && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => onRemove(transfer.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>删除记录</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
     </div>

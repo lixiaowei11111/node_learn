@@ -21,6 +21,9 @@ interface MobileLayoutProps {
   onSendFile: (targetId: string) => void;
   onDownloadFile: (transferId: string) => void;
   onRemoveTransfer: (transferId: string) => void;
+  onPauseTransfer?: (transferId: string) => void;
+  onResumeTransfer?: (transferId: string) => void;
+  onCancelTransfer?: (transferId: string) => void;
   onClearTransfers: () => void;
 }
 
@@ -36,6 +39,9 @@ export function MobileLayout({
   onSendFile,
   onDownloadFile,
   onRemoveTransfer,
+  onPauseTransfer,
+  onResumeTransfer,
+  onCancelTransfer,
   onClearTransfers,
 }: MobileLayoutProps) {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -117,6 +123,9 @@ export function MobileLayout({
               transfers={transfers}
               onDownload={onDownloadFile}
               onRemove={onRemoveTransfer}
+              onPause={onPauseTransfer}
+              onResume={onResumeTransfer}
+              onCancel={onCancelTransfer}
               onClearAll={onClearTransfers}
               isMobile={true}
             />

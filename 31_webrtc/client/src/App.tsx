@@ -40,6 +40,9 @@ function App() {
     disconnect,
     sendFile,
     downloadFile,
+    pauseTransfer,
+    resumeTransfer,
+    cancelTransfer,
     clearTransfers,
     removeTransfer,
   } = useWebRTC({
@@ -144,6 +147,9 @@ function App() {
     onSendFile: handleSendFile,
     onDownloadFile: downloadFile,
     onRemoveTransfer: removeTransfer,
+    onPauseTransfer: pauseTransfer,
+    onResumeTransfer: resumeTransfer,
+    onCancelTransfer: cancelTransfer,
     onClearTransfers: clearTransfers,
   };
 

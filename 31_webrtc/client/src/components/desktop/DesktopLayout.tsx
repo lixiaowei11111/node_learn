@@ -22,6 +22,9 @@ interface DesktopLayoutProps {
   onSendFile: (targetId: string) => void;
   onDownloadFile: (transferId: string) => void;
   onRemoveTransfer: (transferId: string) => void;
+  onPauseTransfer?: (transferId: string) => void;
+  onResumeTransfer?: (transferId: string) => void;
+  onCancelTransfer?: (transferId: string) => void;
   onClearTransfers: () => void;
 }
 
@@ -37,6 +40,9 @@ export function DesktopLayout({
   onSendFile,
   onDownloadFile,
   onRemoveTransfer,
+  onPauseTransfer,
+  onResumeTransfer,
+  onCancelTransfer,
   onClearTransfers,
 }: DesktopLayoutProps) {
   const [activeTab, setActiveTab] = useState<'home' | 'settings'>('home');
@@ -118,6 +124,9 @@ export function DesktopLayout({
                   transfers={transfers}
                   onDownload={onDownloadFile}
                   onRemove={onRemoveTransfer}
+                  onPause={onPauseTransfer}
+                  onResume={onResumeTransfer}
+                  onCancel={onCancelTransfer}
                   onClearAll={onClearTransfers}
                   isMobile={false}
                 />

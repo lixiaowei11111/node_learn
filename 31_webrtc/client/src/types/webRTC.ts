@@ -18,7 +18,13 @@ export interface FileTransfer {
   receivedChunks: number;
   totalChunks: number;
   progress: number;
-  status: 'pending' | 'transferring' | 'completed' | 'failed' | 'assembling';
+  status:
+    | 'pending'
+    | 'transferring'
+    | 'completed'
+    | 'failed'
+    | 'assembling'
+    | 'paused';
   direction: 'send' | 'receive';
   timestamp: number;
   // 新增速度检测相关字段
@@ -32,6 +38,12 @@ export interface FileTransfer {
   useOptimizedStorage?: boolean;
   // 新增：组装进度（0-100）
   assemblingProgress?: number;
+  // 新增：暂停和多通道相关字段
+  isPaused?: boolean;
+  currentChunk?: number; // 当前处理的块索引
+  channelCount?: number; // 使用的通道数量
+  pausedAt?: number; // 暂停时间戳
+  resumedAt?: number; // 恢复时间戳
 }
 
 export interface SignalingMessage {
@@ -138,8 +150,17 @@ export interface UseWebRTCReturn {
   disconnect: () => void;
 
   // 文件传输方法
-  sendFile: (targetId: string, file: File) => Promise<void>;
+  sendFile: (
+    targetId: string,
+    file: File,
+    channelCount?: number,
+  ) => Promise<void>;
   downloadFile: (transferId: string) => void;
+
+  // 传输控制方法
+  pauseTransfer: (transferId: string) => void;
+  resumeTransfer: (transferId: string) => void;
+  cancelTransfer: (transferId: string) => void;
 
   // 状态管理
   clearTransfers: () => void;

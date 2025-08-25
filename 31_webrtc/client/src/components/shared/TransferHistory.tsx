@@ -19,6 +19,9 @@ interface TransferHistoryProps {
   transfers: FileTransfer[];
   onDownload: (transferId: string) => void;
   onRemove: (transferId: string) => void;
+  onPause?: (transferId: string) => void;
+  onResume?: (transferId: string) => void;
+  onCancel?: (transferId: string) => void;
   onClearAll: () => void;
   isMobile?: boolean;
 }
@@ -27,6 +30,9 @@ export function TransferHistory({
   transfers,
   onDownload,
   onRemove,
+  onPause,
+  onResume,
+  onCancel,
   onClearAll,
   isMobile = false,
 }: TransferHistoryProps) {
@@ -85,6 +91,9 @@ export function TransferHistory({
                 transfer={transfer}
                 onDownload={onDownload}
                 onRemove={onRemove}
+                onPause={onPause}
+                onResume={onResume}
+                onCancel={onCancel}
                 isMobile={isMobile}
               />
             ))}
