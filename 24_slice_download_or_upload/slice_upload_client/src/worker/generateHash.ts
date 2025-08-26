@@ -1,22 +1,19 @@
 // 从wasm-hash模块导入哈希计算功能
-import { initWasmHash, WasmHashCalculator } from '../wasm/wasm-hash/index.ts';
-
-interface WorkerChunkType {
-  hash: string;
-  size: number;
-  start: number;
-  end: number;
-}
+import {
+  initWasmHash,
+  WasmHashCalculator,
+  HashType,
+} from '../wasm/wasm-hash/index.ts';
 
 // Worker文件处理消息
 self.onmessage = async (event) => {
-  const { file, chunkSize } = event.data;
+  const { file, chunkSize, hashType = 'blake3' } = event.data;
 
   try {
     // 初始化WASM哈希计算模块
     await initWasmHash();
 
-    const result = await processFile(file, chunkSize);
+    const result = await processFile(file, chunkSize, hashType);
     // 返回处理结果
     self.postMessage({
       type: 'complete',
@@ -31,16 +28,24 @@ self.onmessage = async (event) => {
   }
 };
 
+interface WorkerChunkType {
+  hash: string;
+  size: number;
+  start: number;
+  end: number;
+}
+
 const processFile = (
   file: File,
   chunkSize: number,
+  hashType: HashType = 'blake3',
 ): Promise<{
   fileHash: string;
   chunks: WorkerChunkType[];
 }> => {
   return new Promise((resolve, reject) => {
     // 用于计算整个文件的哈希值
-    const hashCalculator = new WasmHashCalculator();
+    const hashCalculator = new WasmHashCalculator(hashType);
 
     // 用于存储每个分块的信息
     const chunks: WorkerChunkType[] = [];
@@ -64,9 +69,21 @@ const processFile = (
 
     // 报告进度
     const reportProgress = () => {
+      const progress = (currentChunk / totalChunks) * 100;
+      let status = '';
+
+      if (currentChunk === 0) {
+        status = `开始计算文件${hashType.toUpperCase()}哈希...`;
+      } else if (currentChunk === totalChunks) {
+        status = '完成哈希计算';
+      } else {
+        status = `正在计算${hashType.toUpperCase()}哈希... (${currentChunk}/${totalChunks})`;
+      }
+
       self.postMessage({
         type: 'progress',
-        progress: (currentChunk / totalChunks) * 100,
+        progress,
+        status,
       });
     };
 
@@ -112,10 +129,12 @@ const processFile = (
 
     // 开始读取第一个分块
     if (chunks.length > 0) {
+      // 报告开始进度
+      reportProgress();
       loadNext();
     } else {
       // 文件为空的情况
-      const emptyHashCalculator = new WasmHashCalculator();
+      const emptyHashCalculator = new WasmHashCalculator(hashType);
       resolve({
         fileHash: emptyHashCalculator.finalize(),
         chunks: [],

@@ -1,9 +1,10 @@
 /* tslint:disable */
 /* eslint-disable */
-export function calculate_hash(data: Uint8Array): string;
+export function calculate_hash(data: Uint8Array, hash_type: string): string;
 export class HashCalculator {
   free(): void;
   constructor();
+  set_hash_type(hash_type: string): void;
   update(data: Uint8Array): void;
   finalize(): string;
   calculate_chunk_hash(data: Uint8Array): string;
@@ -15,10 +16,11 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_hashcalculator_free: (a: number, b: number) => void;
   readonly hashcalculator_new: () => number;
+  readonly hashcalculator_set_hash_type: (a: number, b: number, c: number) => void;
   readonly hashcalculator_update: (a: number, b: number, c: number) => void;
   readonly hashcalculator_finalize: (a: number) => [number, number];
   readonly hashcalculator_calculate_chunk_hash: (a: number, b: number, c: number) => [number, number];
-  readonly calculate_hash: (a: number, b: number) => [number, number];
+  readonly calculate_hash: (a: number, b: number, c: number, d: number) => [number, number];
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

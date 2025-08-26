@@ -12,7 +12,7 @@ use tokio::task;
 const API_BASE_URL: &str = "http://127.0.0.1:3210/api";
 const CHUNK_SIZE: usize = 25 * 1024 * 1024;
 const NUM_THREADS: usize = 100;
-const DEFAULT_FILE_HASH: &str = "3e83cac0f6bc230a8dfe8fa7632d59d7";
+const DEFAULT_FILE_HASH: &str = "bf2aa78acb8a685cc2e526988bb02deac7dab0a67988c609bdd55d87b7408fc0";
 
 #[derive(Parser)]
 #[command(name = "file-downloader")]

@@ -1,18 +1,23 @@
 import React from 'react';
-import './index.css';
 import {
   TaskStatus,
   taskStatusTextMap,
   taskStatusMap,
 } from '../../util/uploadQueue';
-
-import { Button } from 'antd';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Download, FileText, Hash } from 'lucide-react';
 
 interface UploadProgressProps {
   filename: string;
   progress: number;
   status: TaskStatus;
   fileUrl?: string;
+  hashProgress?: number;
+  isCalculatingHash?: boolean;
+  hashStatus?: string;
 }
 
 const UploadProgress: React.FC<UploadProgressProps> = ({
@@ -20,64 +25,126 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
   progress,
   status,
   fileUrl,
+  hashProgress = 0,
+  isCalculatingHash = false,
+  hashStatus,
 }) => {
-  // 根据状态选择进度条颜色
-  const getProgressBarColor = () => {
-    if (status === taskStatusMap.ERROR) return '#f44336'; // 失败 - 红色
-    if (status === taskStatusMap.PAUSED) return '#ff9800'; // 暂停 - 橙色
-    if (status === taskStatusMap.COMPLETED) return '#4caf50'; // 完成 - 绿色
-    return '#2196f3'; // 默认 - 蓝色
+  // 根据状态选择 Badge 样式
+  const getStatusBadgeVariant = (
+    status: TaskStatus,
+    isCalculatingHash: boolean,
+  ) => {
+    if (isCalculatingHash) return 'secondary';
+    switch (status) {
+      case taskStatusMap.ERROR:
+        return 'destructive';
+      case taskStatusMap.PAUSED:
+        return 'outline';
+      case taskStatusMap.COMPLETED:
+        return 'default';
+      default:
+        return 'secondary';
+    }
   };
 
   const handleDownload = () => {
     if (fileUrl) {
       const downloadLink = document.createElement('a');
-
-      // 完整URL，包含服务器地址和文件路径
       const fullUrl = `${process.env.SERVER_HOST}/api${fileUrl}`;
-
-      // 设置下载属性，提供默认文件名
       downloadLink.href = fullUrl;
       downloadLink.download = filename;
-
-      // 可选：添加rel="noopener"提高安全性
       downloadLink.rel = 'noopener noreferrer';
-
-      // 触发下载
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
     }
   };
 
+  // 确定当前显示的进度和状态
+  const displayProgress = isCalculatingHash ? hashProgress : progress;
+  const displayStatus = isCalculatingHash
+    ? hashStatus || '计算文件hash中...'
+    : taskStatusTextMap[status];
+
+  // 获取进度条的颜色类
+  const getProgressClass = () => {
+    if (isCalculatingHash) return 'bg-purple-500';
+    switch (status) {
+      case taskStatusMap.ERROR:
+        return 'bg-red-500';
+      case taskStatusMap.PAUSED:
+        return 'bg-orange-500';
+      case taskStatusMap.COMPLETED:
+        return 'bg-green-500';
+      default:
+        return 'bg-blue-500';
+    }
+  };
+
   return (
-    <div className="upload-progress">
-      <div className="file-info">
-        <div className="filename">
-          {filename}&nbsp;
-          {fileUrl && status === taskStatusMap.COMPLETED && (
-            <Button
-              type="link"
-              onClick={handleDownload}
-              className="download-button"
-            >
-              查看
-            </Button>
+    <Card className="w-full">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* 文件名和状态行 */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <FileText className="h-4 w-4 text-slate-500 flex-shrink-0" />
+              <span className="font-medium text-sm truncate" title={filename}>
+                {filename}
+              </span>
+              {isCalculatingHash && (
+                <Hash className="h-4 w-4 text-purple-500 animate-spin" />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={getStatusBadgeVariant(status, isCalculatingHash)}>
+                {displayStatus}
+              </Badge>
+              {fileUrl && status === taskStatusMap.COMPLETED && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  className="h-8 px-3"
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  查看
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* 进度条 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">
+                {isCalculatingHash ? 'Hash 计算进度' : '上传进度'}
+              </span>
+              <span className="font-medium text-slate-700">
+                {Math.round(displayProgress)}%
+              </span>
+            </div>
+            <div className="relative">
+              <Progress value={displayProgress} className="h-2" />
+              <div
+                className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-300 ${getProgressClass()}`}
+                style={{ width: `${displayProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Hash 计算时的额外信息 */}
+          {isCalculatingHash && (
+            <div className="text-xs text-purple-600 bg-purple-50 p-2 rounded-md border border-purple-200">
+              <div className="flex items-center gap-1">
+                <Hash className="h-3 w-3" />
+                <span>正在计算文件指纹，确保文件完整性...</span>
+              </div>
+            </div>
           )}
         </div>
-        <div className="status-text">{taskStatusTextMap[status]}</div>
-      </div>
-      <div className="progress-container">
-        <div
-          className="progress-bar"
-          style={{
-            width: `${progress}%`,
-            backgroundColor: getProgressBarColor(),
-          }}
-        ></div>
-      </div>
-      <div className="progress-percentage">{Math.round(progress)}%</div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -91,20 +91,23 @@ function passArray8ToWasm0(arg, malloc) {
 }
 /**
  * @param {Uint8Array} data
+ * @param {string} hash_type
  * @returns {string}
  */
-export function calculate_hash(data) {
-    let deferred2_0;
-    let deferred2_1;
+export function calculate_hash(data, hash_type) {
+    let deferred3_0;
+    let deferred3_1;
     try {
         const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.calculate_hash(ptr0, len0);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
+        const ptr1 = passStringToWasm0(hash_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.calculate_hash(ptr0, len0, ptr1, len1);
+        deferred3_0 = ret[0];
+        deferred3_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
     } finally {
-        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
 }
 
@@ -130,6 +133,14 @@ export class HashCalculator {
         this.__wbg_ptr = ret >>> 0;
         HashCalculatorFinalization.register(this, this.__wbg_ptr, this);
         return this;
+    }
+    /**
+     * @param {string} hash_type
+     */
+    set_hash_type(hash_type) {
+        const ptr0 = passStringToWasm0(hash_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.hashcalculator_set_hash_type(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * @param {Uint8Array} data
@@ -218,6 +229,9 @@ function __wbg_get_imports() {
         } finally {
             wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
         }
+    };
+    imports.wbg.__wbg_log_18cabf63feafdbbf = function(arg0, arg1) {
+        console.log(getStringFromWasm0(arg0, arg1));
     };
     imports.wbg.__wbg_new_8a6f238a6ece86ea = function() {
         const ret = new Error();

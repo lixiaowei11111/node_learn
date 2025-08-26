@@ -16,8 +16,8 @@ export interface UseConnectionOptions {
 export interface UseConnectionReturn {
   connectionState: ConnectionState;
   clients: Client[];
-  wsRef: React.MutableRefObject<WebSocket | null>;
-  clientIdRef: React.MutableRefObject<string>;
+  wsRef: React.RefObject<WebSocket | null>;
+  clientIdRef: React.RefObject<string>;
   connect: (name: string, roomId?: string) => Promise<void>;
   disconnect: () => void;
 }

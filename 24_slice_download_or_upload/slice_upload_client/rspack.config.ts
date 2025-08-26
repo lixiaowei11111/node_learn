@@ -3,6 +3,7 @@ import { rspack } from '@rspack/core';
 import RefreshPlugin from '@rspack/plugin-react-refresh';
 import 'dotenv/config';
 import { DefinePlugin } from '@rspack/core';
+import { resolve } from 'path';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -16,12 +17,20 @@ export default defineConfig({
   },
   resolve: {
     extensions: ['...', '.ts', '.tsx', '.jsx'],
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
   },
   module: {
     rules: [
       {
         test: /\.svg$/,
         type: 'asset',
+      },
+      {
+        test: /\.css$/,
+        use: ['postcss-loader'],
+        type: 'css',
       },
       {
         test: /\.(jsx?|tsx?)$/,
