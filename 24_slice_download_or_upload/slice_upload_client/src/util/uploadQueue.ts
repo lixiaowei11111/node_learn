@@ -114,7 +114,7 @@ export class UploadQueue {
     const { fileHash, chunks } = await processFile(
       file,
       chunkSize,
-      false,
+      true,
       onHashProgress,
       hashType, // 传递哈希算法类型
     );

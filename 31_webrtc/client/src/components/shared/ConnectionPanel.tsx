@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { User, Loader2 } from 'lucide-react';
+import { User, Loader2, AlertCircle } from 'lucide-react';
 import { ConnectionState } from '@/types/webRTC';
 
 interface ConnectionPanelProps {
@@ -22,15 +22,20 @@ export function ConnectionPanel({
 }: ConnectionPanelProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleConnect = useCallback(async () => {
     if (!clientName.trim()) {
-      throw new Error('请输入客户端名称');
+      setErrorMessage('请输入客户端名称');
+      return;
     }
 
+    setErrorMessage(null);
     setIsConnecting(true);
     try {
       await onConnect(clientName);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '连接失败');
     } finally {
       setIsConnecting(false);
     }
@@ -50,6 +55,13 @@ export function ConnectionPanel({
     }
   }, [onDisconnect]);
 
+  const handleNameChange = (value: string) => {
+    onClientNameChange(value);
+    if (errorMessage) {
+      setErrorMessage(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -59,12 +71,21 @@ export function ConnectionPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Input
-          placeholder="输入客户端名称"
-          value={clientName}
-          onChange={(e) => onClientNameChange(e.target.value)}
-          disabled={connectionState.isConnected}
-        />
+        <div className="space-y-2">
+          <Input
+            placeholder="输入客户端名称"
+            value={clientName}
+            onChange={(e) => handleNameChange(e.target.value)}
+            disabled={connectionState.isConnected}
+            className={errorMessage ? 'border-red-500' : ''}
+          />
+          {errorMessage && (
+            <div className="text-red-500 text-sm flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {errorMessage}
+            </div>
+          )}
+        </div>
         {!connectionState.isConnected ? (
           <Button
             onClick={handleConnect}

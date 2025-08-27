@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   UseWebRTCOptions,
   UseWebRTCReturn,
@@ -17,12 +17,15 @@ import { useFileTransfer } from './useFileTransfer';
 const DEFAULT_OPTIONS: Required<UseWebRTCOptions> = {
   serverUrl: process.env.WS_HOST!,
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-  chunkSize: 65536, // 64KB - 更稳定的块大小，避免缓冲区问题
+  chunkSize: 128 * 1024, // 64KB - 更稳定的块大小，避免缓冲区问题
   autoFetchICEServers: true, // 默认自动从服务器获取 ICE 服务器配置
 };
 
 export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
   const config = { ...DEFAULT_OPTIONS, ...options };
+
+  // 创建消息处理函数的引用
+  const messageHandlerRef = useRef<(event: MessageEvent) => void>(() => {});
 
   // 使用文件传输管理
   const {
@@ -63,6 +66,19 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     autoFetchICEServers: config.autoFetchICEServers,
   });
 
+  // 使用连接管理 - 使用引用中的处理函数
+  const {
+    connectionState,
+    clients,
+    wsRef,
+    clientIdRef,
+    connect,
+    disconnect: baseDisconnect,
+  } = useConnection({
+    serverUrl: config.serverUrl,
+    onMessage: (event: MessageEvent) => messageHandlerRef.current(event),
+  });
+
   // WebSocket消息处理回调
   const handleWebSocketMessage = useCallback(
     async (event: MessageEvent) => {
@@ -95,21 +111,13 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         console.error('Error handling WebSocket message in useWebRTC:', error);
       }
     },
-    [handleOffer, handleAnswer, handleIceCandidate],
+    [handleOffer, handleAnswer, handleIceCandidate, clientIdRef, wsRef],
   );
 
-  // 使用连接管理
-  const {
-    connectionState,
-    clients,
-    wsRef,
-    clientIdRef,
-    connect,
-    disconnect: baseDisconnect,
-  } = useConnection({
-    serverUrl: config.serverUrl,
-    onMessage: handleWebSocketMessage,
-  });
+  // 更新消息处理函数引用
+  useEffect(() => {
+    messageHandlerRef.current = handleWebSocketMessage;
+  }, [handleWebSocketMessage]);
 
   // 设置PeerConnection初始化时的数据通道处理
   useEffect(() => {
@@ -122,8 +130,10 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
       );
     }
   }, [
-    peerConnectionRef.current,
-    clientIdRef.current,
+    peerConnectionRef,
+    clientIdRef,
+    wsRef,
+    currentTargetIdRef,
     setupPeerConnectionForDataChannel,
   ]);
 
@@ -154,7 +164,13 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
 
     // 调用基础断开连接
     baseDisconnect();
-  }, [baseDisconnect]);
+  }, [
+    baseDisconnect,
+    dataChannelRef,
+    dataChannelsRef,
+    peerConnectionRef,
+    currentTransferRef,
+  ]);
 
   // 发送文件
   const sendFile = useCallback(
@@ -255,7 +271,15 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
         }
       });
     },
-    [setupDataChannel, transferFile],
+    [
+      setupDataChannel,
+      transferFile,
+      peerConnectionRef,
+      currentTargetIdRef,
+      clientIdRef,
+      wsRef,
+      dataChannelRef,
+    ],
   );
 
   // 扩展connect函数以初始化PeerConnection

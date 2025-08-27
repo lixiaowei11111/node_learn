@@ -1,10 +1,18 @@
-import { createNodeWebSocket } from '@hono/node-ws';
+import { createNodeWebSocket, type NodeWebSocket } from '@hono/node-ws';
 import { Hono, type Context } from 'hono';
 import { WebSocket } from 'ws';
 import { ClientManager } from './clientManager';
 import { SignalingManager } from './signalingManager';
-import type { WebSocketMessage } from '../types/client';
-import { getClientIP, getWebSocketClientIP } from '../utils/index';
+import type { WebSocketMessage, RegisterMessage, SignalingMessage, DisconnectMessage } from '../types/client';
+import { getWebSocketClientIP } from '../utils/index';
+import { WSEvents } from 'hono/ws';
+
+// 定义 Hono WebSocket 包装类型
+interface HonoWebSocketWrapper {
+  raw: WebSocket;
+  send: (data: string | ArrayBuffer) => void;
+  close: () => void;
+}
 
 /**
  * WebSocket连接管理器
@@ -13,8 +21,8 @@ import { getClientIP, getWebSocketClientIP } from '../utils/index';
 export class WebSocketManager {
   private clientManager: ClientManager;
   private signalingManager: SignalingManager;
-  public injectWebSocket: any;
-  public upgradeWebSocket: any;
+  public injectWebSocket: NodeWebSocket['injectWebSocket'];
+  public upgradeWebSocket: NodeWebSocket['upgradeWebSocket'];
 
   constructor(app: Hono) {
     this.clientManager = new ClientManager();
@@ -45,42 +53,58 @@ export class WebSocketManager {
    */
   createWebSocketHandler() {
     return this.upgradeWebSocket((c: Context) => {
-      // 获取客户端IP和User-Agent
-      const clientIP = getClientIP(c);
       const userAgent = c.req.header('user-agent') || '';
+      let clientIP = 'unknown';
 
       return {
-        onOpen: (evt: any, ws: any) => {
+        onOpen: (_evt, wsContext) => {
+          if (wsContext.raw) {
+            const webSocketIP = getWebSocketClientIP(wsContext.raw);
+            clientIP = webSocketIP !== 'unknown' ? webSocketIP : 'unknown';
+          }
           console.log(`Client connected from IP: ${clientIP}`);
         },
 
-        onMessage: (evt: any, ws: any) => {
+        onMessage: (messageEvent, wsContext) => {
           try {
-            const data: WebSocketMessage = JSON.parse(evt.data.toString());
+            const data: WebSocketMessage = JSON.parse(messageEvent.data.toString());
             console.log('Received message:', data.type);
 
-            this.handleMessage(data, ws, clientIP, userAgent);
+            const wsWrapper: HonoWebSocketWrapper = {
+              raw: wsContext.raw as WebSocket,
+              send: (data: string | ArrayBuffer) => wsContext.send(data),
+              close: () => wsContext.close(),
+            };
+
+            this.handleMessage(data, wsWrapper, clientIP, userAgent);
           } catch (error) {
             console.error('Error parsing message:', error);
-            this.sendError(ws, 'Invalid message format');
+            wsContext.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Invalid message format',
+              }),
+            );
           }
         },
 
-        onClose: (evt: any, ws: any) => {
-          this.signalingManager.handleWebSocketClose(ws.raw);
+        onClose: (_evt: CloseEvent, wsContext) => {
+          if (wsContext.raw) {
+            this.signalingManager.handleWebSocketClose(wsContext.raw as WebSocket);
+          }
         },
 
-        onError: (evt: any, ws: any) => {
-          console.error('WebSocket error:', evt);
+        onError: (error, _wsContext) => {
+          console.error('WebSocket error:', error);
         },
-      };
+      } as WSEvents<WebSocket>;
     });
   }
 
   /**
    * 处理WebSocket消息
    */
-  private handleMessage(data: WebSocketMessage, ws: any, clientIP: string, userAgent: string): void {
+  private handleMessage(data: WebSocketMessage, ws: HonoWebSocketWrapper, clientIP: string, userAgent: string): void {
     switch (data.type) {
       case 'register':
         this.handleRegisterMessage(data, ws, clientIP, userAgent);
@@ -89,42 +113,50 @@ export class WebSocketManager {
       case 'offer':
       case 'answer':
       case 'ice-candidate':
-        this.handleSignalingMessage(data, ws);
+        this.handleSignalingMessage(data as SignalingMessage, ws);
         break;
 
       case 'disconnect':
-        this.handleDisconnectMessage(data);
+        this.handleDisconnectMessage(data as DisconnectMessage);
         break;
 
       default:
-        console.warn('Unknown message type:', (data as any).type);
-        this.sendError(ws, 'Unknown message type');
+        // 使用类型断言解决 never 类型问题
+        const unknownType = (data as { type: string }).type;
+        console.warn('Unknown message type:', unknownType);
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            message: 'Unknown message type',
+          }),
+        );
     }
   }
 
   /**
    * 处理注册消息
    */
-  private handleRegisterMessage(data: any, ws: any, clientIP: string, userAgent: string): void {
+  private handleRegisterMessage(
+    data: RegisterMessage,
+    ws: HonoWebSocketWrapper,
+    clientIP: string,
+    userAgent: string,
+  ): void {
     if (!ws.raw) {
       console.error('WebSocket raw is undefined');
-      this.sendError(ws, 'WebSocket connection invalid');
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          message: 'WebSocket connection invalid',
+        }),
+      );
       return;
     }
 
-    // 尝试从WebSocket连接获取更准确的IP地址
-    const webSocketIP = getWebSocketClientIP(ws.raw);
-    const finalIP = webSocketIP !== 'unknown' ? webSocketIP : clientIP;
+    console.log(`Client registering - IP: ${clientIP}, Room: ${data.roomId || 'default'}`);
 
-    console.log(
-      `Client registering - HTTP IP: ${clientIP}, WebSocket IP: ${webSocketIP}, Final IP: ${finalIP}, Room: ${
-        data.roomId || 'default'
-      }`,
-    );
+    const result = this.signalingManager.handleRegister(ws.raw, data.name, clientIP, userAgent, data.roomId);
 
-    const result = this.signalingManager.handleRegister(ws.raw, data.name, finalIP, userAgent, data.roomId);
-
-    // 发送注册成功消息
     ws.send(
       JSON.stringify({
         type: 'registered',
@@ -136,34 +168,23 @@ export class WebSocketManager {
   /**
    * 处理信令消息
    */
-  private handleSignalingMessage(data: any, ws: any): void {
+  private handleSignalingMessage(data: SignalingMessage, ws: HonoWebSocketWrapper): void {
     const success = this.signalingManager.handleSignalingMessage(data);
 
     if (!success) {
-      this.sendError(ws, `Target client ${data.targetId} not found or unavailable`);
+      ws.send(
+        JSON.stringify({
+          type: 'error',
+          message: `Target client ${data.targetId} not found or unavailable`,
+        }),
+      );
     }
   }
 
   /**
    * 处理断开连接消息
    */
-  private handleDisconnectMessage(data: any): void {
+  private handleDisconnectMessage(data: DisconnectMessage): void {
     this.signalingManager.handleDisconnect(data.clientId);
-  }
-
-  /**
-   * 发送错误消息
-   */
-  private sendError(ws: any, message: string): void {
-    try {
-      ws.send(
-        JSON.stringify({
-          type: 'error',
-          message,
-        }),
-      );
-    } catch (error) {
-      console.error('Failed to send error message:', error);
-    }
   }
 }

@@ -13,16 +13,16 @@ export interface UseDataChannelOptions {
 }
 
 export interface UseDataChannelReturn {
-  dataChannelRef: React.MutableRefObject<RTCDataChannel | null>;
-  dataChannelsRef: React.MutableRefObject<RTCDataChannel[]>;
-  currentTransferRef: React.MutableRefObject<Partial<FileTransfer> | null>;
+  dataChannelRef: React.RefObject<RTCDataChannel | null>;
+  dataChannelsRef: React.RefObject<RTCDataChannel[]>;
+  currentTransferRef: React.RefObject<Partial<FileTransfer> | null>;
   setupDataChannel: (channel: RTCDataChannel) => void;
   transferFile: (file: File) => Promise<void>;
   setupPeerConnectionForDataChannel: (
     peerConnection: RTCPeerConnection,
     clientId: string,
-    wsRef: React.MutableRefObject<WebSocket | null>,
-    currentTargetIdRef: React.MutableRefObject<string>,
+    wsRef: React.RefObject<WebSocket | null>,
+    currentTargetIdRef: React.RefObject<string>,
   ) => void;
 }
 
@@ -213,8 +213,8 @@ export const useDataChannel = (
     (
       peerConnection: RTCPeerConnection,
       clientId: string,
-      wsRef: React.MutableRefObject<WebSocket | null>,
-      currentTargetIdRef: React.MutableRefObject<string>,
+      wsRef: React.RefObject<WebSocket | null>,
+      currentTargetIdRef: React.RefObject<string>,
     ) => {
       peerConnection.onicecandidate = (event) => {
         if (

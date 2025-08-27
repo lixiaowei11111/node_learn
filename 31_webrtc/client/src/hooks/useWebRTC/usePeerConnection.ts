@@ -12,13 +12,13 @@ export interface UsePeerConnectionOptions {
 }
 
 export interface UsePeerConnectionReturn {
-  peerConnectionRef: React.MutableRefObject<RTCPeerConnection | null>;
-  currentTargetIdRef: React.MutableRefObject<string>;
+  peerConnectionRef: React.RefObject<RTCPeerConnection | null>;
+  currentTargetIdRef: React.RefObject<string>;
   initializePeerConnection: () => Promise<void>;
   handleOffer: (
     data: OfferMessage,
     clientId: string,
-    wsRef: React.MutableRefObject<WebSocket | null>,
+    wsRef: React.RefObject<WebSocket | null>,
   ) => Promise<void>;
   handleAnswer: (data: AnswerMessage) => Promise<void>;
   handleIceCandidate: (data: IceCandidateMessage) => Promise<void>;
@@ -87,7 +87,7 @@ export const usePeerConnection = (
     async (
       data: OfferMessage,
       clientId: string,
-      wsRef: React.MutableRefObject<WebSocket | null>,
+      wsRef: React.RefObject<WebSocket | null>,
     ) => {
       if (!peerConnectionRef.current) return;
 

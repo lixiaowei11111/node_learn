@@ -196,7 +196,7 @@ dataChannel.send(JSON.stringify(fileInfo));
 #### 3.2 文件分块传输 (Chunked Transfer)
 ```typescript
 // 文件分块处理
-const chunkSize = 65536; // 64KB
+const chunkSize = 128*1024; // 64KB
 const totalChunks = Math.ceil(file.size / chunkSize);
 
 for (let i = 0; i < totalChunks; i++) {

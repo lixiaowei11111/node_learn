@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import { ClientManager } from './clientManager';
-import type { WebSocketMessage, SignalingMessage } from '../types/client';
+import type { SignalingMessage } from '../types/client';
 
 /**
  * 信令管理器

@@ -23,6 +23,7 @@ export interface ClientInfo {
 export interface RegisterMessage {
   type: 'register';
   name?: string;
+  roomId?: string;
 }
 
 export interface SignalingMessage {

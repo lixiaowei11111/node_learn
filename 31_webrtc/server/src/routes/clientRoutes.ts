@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import type { ClientManager } from '../services/clientManager';
-import { getClientIP } from '../utils/index';
 
 /**
  * 创建客户端相关的路由
@@ -85,22 +84,6 @@ export function createClientRoutes(app: Hono, clientManager: ClientManager) {
         connected: client.connected,
         lastSeen: new Date(client.lastSeen).toISOString(),
         userAgent: client.userAgent,
-      },
-    });
-  });
-
-  // 获取当前客户端的IP地址
-  app.get('/api/my-ip', (c) => {
-    const clientIP = getClientIP(c);
-    return c.json({
-      success: true,
-      ip: clientIP,
-      timestamp: new Date().toISOString(),
-      headers: {
-        'x-forwarded-for': c.req.header('x-forwarded-for'),
-        'x-real-ip': c.req.header('x-real-ip'),
-        'cf-connecting-ip': c.req.header('cf-connecting-ip'),
-        'user-agent': c.req.header('user-agent'),
       },
     });
   });

@@ -120,7 +120,6 @@ function startServer(): void {
   console.log('  GET  /info                - Server information');
   console.log('  GET  /clients             - List all clients');
   console.log('  GET  /clients/:id         - Get client details');
-  console.log('  GET  /api/my-ip           - Get client IP address');
   console.log('  GET  /api/webrtc-config   - WebRTC configuration');
   console.log('  GET  /api/ice-servers     - ICE servers list');
   console.log('  GET  /api/ice-config      - ICE configuration');

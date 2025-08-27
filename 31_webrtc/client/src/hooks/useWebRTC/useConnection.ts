@@ -109,15 +109,10 @@ export const useConnection = (
           wsRef.current = new WebSocket(options.serverUrl);
 
           wsRef.current.onopen = () => {
-            // 从URL参数获取房间ID，如果没有则使用传入的roomId
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlRoomId = urlParams.get('room');
-            const finalRoomId = urlRoomId || roomId || 'default';
-
             const message: RegisterMessage = {
               type: 'register',
               name: name,
-              roomId: finalRoomId,
+              roomId: roomId || 'default',
             };
             wsRef.current!.send(JSON.stringify(message));
           };

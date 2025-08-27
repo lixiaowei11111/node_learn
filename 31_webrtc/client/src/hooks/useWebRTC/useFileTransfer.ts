@@ -5,7 +5,7 @@ import { FileTransfer } from '../../types/webRTC';
 
 export interface UseFileTransferReturn {
   transfers: FileTransfer[];
-  pausedTransfersRef: React.MutableRefObject<
+  pausedTransfersRef: React.RefObject<
     Map<string, { resolve: () => void; reject: (error: Error) => void }>
   >;
   addTransfer: (transfer: FileTransfer) => void;
