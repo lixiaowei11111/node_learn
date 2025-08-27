@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DesktopHeader } from './DesktopHeader';
 import { FileUpload } from '../shared/FileUpload';
-import { TransferHistory } from '../shared/TransferHistory';
+import { TransferRecord } from '../shared/TransferRecord';
 import { ControlPanel } from '../shared/ControlPanel';
 import { ICEServerManager } from '../shared/ICEServerManager';
 import { RoomManager } from '../shared/RoomManager';
@@ -120,7 +120,7 @@ export function DesktopLayout({
                   isMobile={false}
                 />
 
-                <TransferHistory
+                <TransferRecord
                   transfers={transfers}
                   onDownload={onDownloadFile}
                   onRemove={onRemoveTransfer}

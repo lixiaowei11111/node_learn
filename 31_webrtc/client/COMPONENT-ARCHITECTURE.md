@@ -45,7 +45,7 @@
 - 文件选择和预览
 - 支持移动端和桌面端不同样式
 
-#### `TransferHistory.tsx`
+#### `TransferRecord.tsx`
 - 传输历史记录组件
 - 显示所有文件传输记录
 - 支持清除所有记录
@@ -121,7 +121,7 @@ src/
 │   ├── ConnectionPanel.tsx     # 连接面板
 │   ├── DeviceList.tsx          # 设备列表
 │   ├── FileUpload.tsx          # 文件上传
-│   ├── TransferHistory.tsx     # 传输历史
+│   ├── TransferRecord.tsx     # 传输历史
 │   ├── TransferItem.tsx        # 传输项
 │   ├── ControlPanel.tsx        # 控制面板
 │   └── index.ts                # 组件导出

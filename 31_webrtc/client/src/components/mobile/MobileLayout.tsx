@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MobileHeader } from './MobileHeader';
 import { ControlPanel } from '../shared/ControlPanel';
 import { FileUpload } from '../shared/FileUpload';
-import { TransferHistory } from '../shared/TransferHistory';
+import { TransferRecord } from '../shared/TransferRecord';
 import { ICEServerManager } from '../shared/ICEServerManager';
 import { RoomManager } from '../shared/RoomManager';
 import { Button } from '@/components/ui/button';
@@ -119,7 +119,7 @@ export function MobileLayout({
               isMobile={true}
             />
 
-            <TransferHistory
+            <TransferRecord
               transfers={transfers}
               onDownload={onDownloadFile}
               onRemove={onRemoveTransfer}

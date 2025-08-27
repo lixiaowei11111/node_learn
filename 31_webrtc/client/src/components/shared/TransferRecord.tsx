@@ -26,7 +26,7 @@ interface TransferHistoryProps {
   isMobile?: boolean;
 }
 
-export function TransferHistory({
+export function TransferRecord({
   transfers,
   onDownload,
   onRemove,
