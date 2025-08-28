@@ -5,9 +5,11 @@ import { TransferRecord } from '../shared/TransferRecord';
 import { ControlPanel } from '../shared/ControlPanel';
 import { ICEServerManager } from '../shared/ICEServerManager';
 import { RoomManager } from '../shared/RoomManager';
+import { DeviceList } from '../shared/DeviceList';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Settings, Home } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, Settings, Home, Video } from 'lucide-react';
 import { ConnectionState, ExtendedClient, FileTransfer } from '@/types/webRTC';
 
 interface DesktopLayoutProps {
@@ -20,12 +22,14 @@ interface DesktopLayoutProps {
   onConnect: (clientName: string) => Promise<void>;
   onDisconnect: () => void;
   onSendFile: (targetId: string) => void;
+  onVideoCall?: (targetId: string, targetName: string) => Promise<void>;
   onDownloadFile: (transferId: string) => void;
   onRemoveTransfer: (transferId: string) => void;
   onPauseTransfer?: (transferId: string) => void;
   onResumeTransfer?: (transferId: string) => void;
   onCancelTransfer?: (transferId: string) => void;
   onClearTransfers: () => void;
+  isInCall?: boolean;
 }
 
 export function DesktopLayout({
@@ -38,14 +42,18 @@ export function DesktopLayout({
   onConnect,
   onDisconnect,
   onSendFile,
+  onVideoCall,
   onDownloadFile,
   onRemoveTransfer,
   onPauseTransfer,
   onResumeTransfer,
   onCancelTransfer,
   onClearTransfers,
+  isInCall,
 }: DesktopLayoutProps) {
-  const [activeTab, setActiveTab] = useState<'home' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'video' | 'settings'>(
+    'home',
+  );
   const [clientName, setClientName] = useState('');
 
   return (
@@ -78,6 +86,8 @@ export function DesktopLayout({
             onConnect={onConnect}
             onDisconnect={onDisconnect}
             onSendFile={onSendFile}
+            onVideoCall={onVideoCall}
+            isInCall={isInCall}
           />
         </aside>
 
@@ -95,6 +105,15 @@ export function DesktopLayout({
                 >
                   <Home className="h-4 w-4" />
                   文件传输
+                </Button>
+                <Button
+                  variant={activeTab === 'video' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('video')}
+                  className="flex items-center gap-2"
+                >
+                  <Video className="h-4 w-4" />
+                  视频通话
                 </Button>
                 <Button
                   variant={activeTab === 'settings' ? 'default' : 'ghost'}
@@ -130,6 +149,42 @@ export function DesktopLayout({
                   onClearAll={onClearTransfers}
                   isMobile={false}
                 />
+              </div>
+            )}
+
+            {activeTab === 'video' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Video className="w-5 h-5" />
+                      视频通话
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {connectionState.isConnected ? (
+                      <div className="space-y-4">
+                        <p className="text-muted-foreground">
+                          点击下方的视频通话按钮与其他设备进行视频通话
+                        </p>
+                        <DeviceList
+                          displayClients={displayClients}
+                          onSendFile={onSendFile}
+                          onVideoCall={onVideoCall}
+                          selectedFile={selectedFile}
+                          isInCall={isInCall}
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Video className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-muted-foreground">
+                          请先连接到服务器以使用视频通话功能
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
 

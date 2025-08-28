@@ -11,6 +11,8 @@ interface ControlPanelProps {
   onConnect: (clientName: string) => Promise<void>;
   onDisconnect: () => void;
   onSendFile: (targetId: string) => void;
+  onVideoCall?: (targetId: string, targetName: string) => Promise<void>;
+  isInCall?: boolean;
 }
 
 export function ControlPanel({
@@ -22,6 +24,8 @@ export function ControlPanel({
   onConnect,
   onDisconnect,
   onSendFile,
+  onVideoCall,
+  isInCall,
 }: ControlPanelProps) {
   return (
     <div className="space-y-6">
@@ -37,7 +41,9 @@ export function ControlPanel({
         <DeviceList
           displayClients={displayClients}
           onSendFile={onSendFile}
+          onVideoCall={onVideoCall}
           selectedFile={selectedFile}
+          isInCall={isInCall}
         />
       )}
     </div>

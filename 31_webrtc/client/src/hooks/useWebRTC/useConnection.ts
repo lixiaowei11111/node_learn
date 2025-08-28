@@ -18,6 +18,7 @@ export interface UseConnectionReturn {
   clients: Client[];
   wsRef: React.RefObject<WebSocket | null>;
   clientIdRef: React.RefObject<string>;
+  clientNameRef: React.RefObject<string>;
   connect: (name: string, roomId?: string) => Promise<void>;
   disconnect: () => void;
 }
@@ -38,6 +39,7 @@ export const useConnection = (
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
   const clientIdRef = useRef<string>('');
+  const clientNameRef = useRef<string>('');
 
   // WebSocket消息处理
   const handleWebSocketMessage = useCallback(
@@ -57,6 +59,7 @@ export const useConnection = (
 
             // 保存到 ref 中，确保立即可用
             clientIdRef.current = msg.clientId;
+            clientNameRef.current = msg.name;
 
             setConnectionState((prev) => ({
               ...prev,
@@ -209,6 +212,7 @@ export const useConnection = (
     clients,
     wsRef,
     clientIdRef,
+    clientNameRef,
     connect,
     disconnect,
   };

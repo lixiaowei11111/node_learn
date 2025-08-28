@@ -6,8 +6,10 @@ import { TransferRecord } from '../shared/TransferRecord';
 import { ICEServerManager } from '../shared/ICEServerManager';
 import { RoomManager } from '../shared/RoomManager';
 import { Button } from '@/components/ui/button';
-import { Home, Settings } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Home, Settings, Video } from 'lucide-react';
 import { ConnectionState, ExtendedClient, FileTransfer } from '@/types/webRTC';
+import { DeviceList } from '../shared/DeviceList';
 
 interface MobileLayoutProps {
   connectionState: ConnectionState;
@@ -19,12 +21,14 @@ interface MobileLayoutProps {
   onConnect: (clientName: string) => Promise<void>;
   onDisconnect: () => void;
   onSendFile: (targetId: string) => void;
+  onVideoCall?: (targetId: string, targetName: string) => Promise<void>;
   onDownloadFile: (transferId: string) => void;
   onRemoveTransfer: (transferId: string) => void;
   onPauseTransfer?: (transferId: string) => void;
   onResumeTransfer?: (transferId: string) => void;
   onCancelTransfer?: (transferId: string) => void;
   onClearTransfers: () => void;
+  isInCall?: boolean;
 }
 
 export function MobileLayout({
@@ -37,21 +41,27 @@ export function MobileLayout({
   onConnect,
   onDisconnect,
   onSendFile,
+  onVideoCall,
   onDownloadFile,
   onRemoveTransfer,
   onPauseTransfer,
   onResumeTransfer,
   onCancelTransfer,
   onClearTransfers,
+  isInCall,
 }: MobileLayoutProps) {
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'home' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'video' | 'settings'>(
+    'home',
+  );
   const [clientName, setClientName] = useState('');
 
   const getTitle = () => {
     switch (activeTab) {
       case 'home':
         return '文件传输';
+      case 'video':
+        return '视频通话';
       case 'settings':
         return '服务器设置';
       default:
@@ -77,6 +87,8 @@ export function MobileLayout({
           onConnect={onConnect}
           onDisconnect={onDisconnect}
           onSendFile={onSendFile}
+          onVideoCall={onVideoCall}
+          isInCall={isInCall}
         />
       </MobileHeader>
 
@@ -92,6 +104,15 @@ export function MobileLayout({
             >
               <Home className="h-4 w-4" />
               传输
+            </Button>
+            <Button
+              variant={activeTab === 'video' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveTab('video')}
+              className="flex items-center gap-2 flex-1"
+            >
+              <Video className="h-4 w-4" />
+              通话
             </Button>
             <Button
               variant={activeTab === 'settings' ? 'default' : 'ghost'}
@@ -129,6 +150,44 @@ export function MobileLayout({
               onClearAll={onClearTransfers}
               isMobile={true}
             />
+          </div>
+        )}
+
+        {activeTab === 'video' && (
+          <div className="space-y-6">
+            <RoomManager isConnected={connectionState.isConnected} />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="w-5 h-5" />
+                  视频通话
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {connectionState.isConnected ? (
+                  <div className="space-y-4">
+                    <p className="text-muted-foreground text-sm">
+                      点击下方的视频通话按钮与其他设备进行视频通话
+                    </p>
+                    <DeviceList
+                      displayClients={displayClients}
+                      onSendFile={onSendFile}
+                      onVideoCall={onVideoCall}
+                      selectedFile={selectedFile}
+                      isInCall={isInCall}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Video className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground text-sm">
+                      请先连接到服务器以使用视频通话功能
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 

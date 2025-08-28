@@ -1,19 +1,23 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users } from 'lucide-react';
+import { Users, Video, VideoOff } from 'lucide-react';
 import { ExtendedClient } from '@/types/webRTC';
 
 interface DeviceListProps {
   displayClients: ExtendedClient[];
   onSendFile: (targetId: string) => void;
+  onVideoCall?: (targetId: string, targetName: string) => Promise<void>;
   selectedFile: File | null;
+  isInCall?: boolean;
 }
 
 export function DeviceList({
   displayClients,
   onSendFile,
+  onVideoCall,
   selectedFile,
+  isInCall = false,
 }: DeviceListProps) {
   return (
     <Card>
@@ -47,15 +51,34 @@ export function DeviceList({
                         IP: {client.ip}
                       </p>
                     )}
-                    <Button
-                      size="sm"
-                      onClick={() => onSendFile(client.id)}
-                      disabled={!selectedFile || isCurrentDevice}
-                      className="w-full"
-                      variant={isCurrentDevice ? 'secondary' : 'default'}
-                    >
-                      {isCurrentDevice ? '本设备' : '发送文件'}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => onSendFile(client.id)}
+                        disabled={!selectedFile || isCurrentDevice}
+                        className="flex-1"
+                        variant={isCurrentDevice ? 'secondary' : 'default'}
+                      >
+                        {isCurrentDevice ? '本设备' : '发送文件'}
+                      </Button>
+
+                      {onVideoCall && !isCurrentDevice && (
+                        <Button
+                          size="sm"
+                          onClick={() => onVideoCall(client.id, client.name)}
+                          disabled={isInCall}
+                          variant="outline"
+                          className="flex items-center gap-1 px-3"
+                          title={isInCall ? '通话中' : '发起视频通话'}
+                        >
+                          {isInCall ? (
+                            <VideoOff className="h-3 w-3" />
+                          ) : (
+                            <Video className="h-3 w-3" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

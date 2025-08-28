@@ -7,6 +7,7 @@ import { useMobile, mobileUtils } from './hooks/useMobile';
 import { ExtendedClient } from './types/webRTC';
 import { MobileLayout } from './components/mobile/MobileLayout';
 import { DesktopLayout } from './components/desktop/DesktopLayout';
+import { VideoCallManager } from './components/shared/VideoCallManager';
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -45,6 +46,7 @@ function App() {
     cancelTransfer,
     clearTransfers,
     removeTransfer,
+    videoCall,
   } = useWebRTC({
     serverUrl: process.env.WS_HOST,
   });
@@ -135,6 +137,20 @@ function App() {
     connectionState.clientIP,
   ]);
 
+  // 视频通话处理
+  const handleVideoCall = useCallback(
+    async (targetId: string, targetName: string) => {
+      try {
+        await videoCall.initiateCall(targetId, targetName);
+        toast.success(`正在呼叫 ${targetName}...`);
+      } catch (error) {
+        toast.error('发起通话失败: ' + (error as Error).message);
+        throw error;
+      }
+    },
+    [videoCall],
+  );
+
   const commonProps = {
     connectionState,
     displayClients,
@@ -145,12 +161,14 @@ function App() {
     onConnect: handleConnect,
     onDisconnect: handleDisconnect,
     onSendFile: handleSendFile,
+    onVideoCall: handleVideoCall,
     onDownloadFile: downloadFile,
     onRemoveTransfer: removeTransfer,
     onPauseTransfer: pauseTransfer,
     onResumeTransfer: resumeTransfer,
     onCancelTransfer: cancelTransfer,
     onClearTransfers: clearTransfers,
+    isInCall: videoCall.callState.isInCall || videoCall.callState.isIncoming,
   };
 
   return (
@@ -160,6 +178,10 @@ function App() {
       ) : (
         <DesktopLayout {...commonProps} />
       )}
+
+      {/* 视频通话管理器 - 全局层级 */}
+      <VideoCallManager videoCall={videoCall} />
+
       <Toaster />
     </TooltipProvider>
   );

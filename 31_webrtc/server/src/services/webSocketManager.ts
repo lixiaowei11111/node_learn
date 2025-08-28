@@ -113,6 +113,11 @@ export class WebSocketManager {
       case 'offer':
       case 'answer':
       case 'ice-candidate':
+      case 'call-invite':
+      case 'call-accept':
+      case 'call-reject':
+      case 'call-end':
+      case 'call-cancel':
         this.handleSignalingMessage(data as SignalingMessage, ws);
         break;
 

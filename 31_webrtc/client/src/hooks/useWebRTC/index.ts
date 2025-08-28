@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { toast } from '../../lib/toast';
 import {
   UseWebRTCOptions,
   UseWebRTCReturn,
@@ -6,6 +7,11 @@ import {
   OfferMessage,
   AnswerMessage,
   IceCandidateMessage,
+  VideoCallInviteMessage,
+  VideoCallAcceptMessage,
+  VideoCallRejectMessage,
+  VideoCallEndMessage,
+  VideoCallCancelMessage,
 } from '../../types/webRTC';
 
 // 导入拆分后的hooks
@@ -13,12 +19,17 @@ import { useConnection } from './useConnection';
 import { usePeerConnection } from './usePeerConnection';
 import { useDataChannel } from './useDataChannel';
 import { useFileTransfer } from './useFileTransfer';
+import { useVideoCall } from './useVideoCall';
 
 const DEFAULT_OPTIONS: Required<UseWebRTCOptions> = {
   serverUrl: process.env.WS_HOST!,
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
   chunkSize: 128 * 1024, // 64KB - 更稳定的块大小，避免缓冲区问题
   autoFetchICEServers: true, // 默认自动从服务器获取 ICE 服务器配置
+  onCallInvite: () => {},
+  onCallAccept: () => {},
+  onCallReject: () => {},
+  onCallEnd: () => {},
 };
 
 export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
@@ -72,11 +83,27 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     clients,
     wsRef,
     clientIdRef,
+    clientNameRef,
     connect,
     disconnect: baseDisconnect,
   } = useConnection({
     serverUrl: config.serverUrl,
     onMessage: (event: MessageEvent) => messageHandlerRef.current(event),
+  });
+
+  // 使用视频通话管理
+  const videoCallHook = useVideoCall({
+    wsRef,
+    clientIdRef,
+    clientNameRef,
+    peerConnectionRef,
+    options: {
+      onCallInvite: (invite) =>
+        console.log('Incoming call from:', invite.fromName),
+      onCallAccept: (accept) => console.log('Call accepted by:', accept.fromId),
+      onCallReject: (reject) => console.log('Call rejected:', reject.reason),
+      onCallEnd: (end) => console.log('Call ended by:', end.fromId),
+    },
   });
 
   // WebSocket消息处理回调
@@ -106,12 +133,92 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
             await handleIceCandidate(msg);
             break;
           }
+
+          case 'call-invite': {
+            const msg = data as VideoCallInviteMessage;
+            console.log(
+              `[Client] Received call invite from ${msg.fromId} (${msg.fromName})`,
+            );
+
+            // 首先更新video call状态
+            videoCallHook.handleIncomingCall(msg);
+
+            // 然后通过options回调通知UI组件
+            if (options.onCallInvite) {
+              options.onCallInvite(msg);
+            } else {
+              console.warn('No onCallInvite handler registered');
+            }
+            break;
+          }
+
+          case 'call-accept': {
+            const msg = data as VideoCallAcceptMessage;
+            console.log(`[Client] Call accepted by ${msg.fromId}`);
+
+            // 首先更新video call状态
+            videoCallHook.handleCallAccepted();
+
+            // 然后通过options回调处理
+            if (options.onCallAccept) {
+              options.onCallAccept(msg);
+            } else {
+              console.warn('No onCallAccept handler registered');
+            }
+            break;
+          }
+
+          case 'call-reject': {
+            const msg = data as VideoCallRejectMessage;
+            console.log(
+              `[Client] Call rejected by ${msg.fromId}, reason: ${msg.reason}`,
+            );
+
+            // 清理通话状态
+            videoCallHook.endCall();
+            toast.info(
+              `${msg.fromId} 拒绝了通话${msg.reason ? `: ${msg.reason}` : ''}`,
+            );
+
+            options.onCallReject?.(msg);
+            break;
+          }
+
+          case 'call-end': {
+            const msg = data as VideoCallEndMessage;
+            console.log(`[Client] Call ended by ${msg.fromId}`);
+
+            // 清理通话状态
+            videoCallHook.endCall();
+            toast.info('对方已结束通话');
+
+            options.onCallEnd?.(msg);
+            break;
+          }
+
+          case 'call-cancel': {
+            const msg = data as VideoCallCancelMessage;
+            console.log(`[Client] Call cancelled by ${msg.fromId}`);
+
+            // 清理通话状态
+            videoCallHook.endCall();
+            toast.info('对方已取消通话');
+            break;
+          }
         }
       } catch (error) {
         console.error('Error handling WebSocket message in useWebRTC:', error);
       }
     },
-    [handleOffer, handleAnswer, handleIceCandidate, clientIdRef, wsRef],
+    [
+      handleOffer,
+      handleAnswer,
+      handleIceCandidate,
+      clientIdRef,
+      wsRef,
+      videoCallHook,
+      options,
+    ],
   );
 
   // 更新消息处理函数引用
@@ -311,5 +418,6 @@ export const useWebRTC = (options: UseWebRTCOptions = {}): UseWebRTCReturn => {
     cancelTransfer,
     clearTransfers,
     removeTransfer,
+    videoCall: videoCallHook,
   };
 };

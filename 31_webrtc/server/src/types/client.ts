@@ -27,10 +27,45 @@ export interface RegisterMessage {
 }
 
 export interface SignalingMessage {
-  type: 'offer' | 'answer' | 'ice-candidate';
+  type:
+    | 'offer'
+    | 'answer'
+    | 'ice-candidate'
+    | 'call-invite'
+    | 'call-accept'
+    | 'call-reject'
+    | 'call-end'
+    | 'call-cancel';
   targetId: string;
   fromId: string;
   [key: string]: any;
+}
+
+export interface VideoCallInviteMessage extends SignalingMessage {
+  type: 'call-invite';
+  fromName: string;
+  callId: string;
+}
+
+export interface VideoCallAcceptMessage extends SignalingMessage {
+  type: 'call-accept';
+  callId: string;
+}
+
+export interface VideoCallRejectMessage extends SignalingMessage {
+  type: 'call-reject';
+  callId: string;
+  reason?: string;
+}
+
+export interface VideoCallEndMessage extends SignalingMessage {
+  type: 'call-end';
+  callId: string;
+}
+
+export interface VideoCallCancelMessage extends SignalingMessage {
+  type: 'call-cancel';
+  callId: string;
 }
 
 export interface DisconnectMessage {
@@ -38,4 +73,12 @@ export interface DisconnectMessage {
   clientId: string;
 }
 
-export type WebSocketMessage = RegisterMessage | SignalingMessage | DisconnectMessage;
+export type WebSocketMessage =
+  | RegisterMessage
+  | SignalingMessage
+  | DisconnectMessage
+  | VideoCallInviteMessage
+  | VideoCallAcceptMessage
+  | VideoCallRejectMessage
+  | VideoCallEndMessage
+  | VideoCallCancelMessage;

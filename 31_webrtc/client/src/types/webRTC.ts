@@ -54,8 +54,113 @@ export interface SignalingMessage {
     | 'offer'
     | 'answer'
     | 'ice-candidate'
-    | 'disconnect';
+    | 'disconnect'
+    | 'call-invite'
+    | 'call-accept'
+    | 'call-reject'
+    | 'call-end'
+    | 'call-cancel';
   [key: string]: unknown;
+}
+
+// 视频通话相关类型定义
+export interface VideoCallState {
+  isInCall: boolean;
+  isIncoming: boolean;
+  callId: string | null;
+  targetId: string | null;
+  targetName: string | null;
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  isMuted: boolean;
+  isVideoEnabled: boolean;
+  callStartTime: number | null;
+  windowState: 'minimized' | 'normal' | 'maximized';
+}
+
+export interface VideoCallInviteMessage extends SignalingMessage {
+  type: 'call-invite';
+  fromId: string;
+  fromName: string;
+  targetId: string;
+  callId: string;
+}
+
+export interface VideoCallAcceptMessage extends SignalingMessage {
+  type: 'call-accept';
+  fromId: string;
+  targetId: string;
+  callId: string;
+}
+
+export interface VideoCallRejectMessage extends SignalingMessage {
+  type: 'call-reject';
+  fromId: string;
+  targetId: string;
+  callId: string;
+  reason?: string;
+}
+
+export interface VideoCallEndMessage extends SignalingMessage {
+  type: 'call-end';
+  fromId: string;
+  targetId: string;
+  callId: string;
+}
+
+export interface VideoCallCancelMessage extends SignalingMessage {
+  type: 'call-cancel';
+  fromId: string;
+  targetId: string;
+  callId: string;
+}
+
+export interface MediaStreamOptions {
+  video: boolean | MediaTrackConstraints;
+  audio: boolean | MediaTrackConstraints;
+  videoQuality?: 'low' | 'medium' | 'high';
+}
+
+export interface UseVideoCallOptions {
+  autoAnswer?: boolean;
+  defaultVideoEnabled?: boolean;
+  defaultAudioEnabled?: boolean;
+  onCallInvite?: (invite: VideoCallInviteMessage) => void;
+  onCallAccept?: (accept: VideoCallAcceptMessage) => void;
+  onCallReject?: (reject: VideoCallRejectMessage) => void;
+  onCallEnd?: (end: VideoCallEndMessage) => void;
+}
+
+export interface UseVideoCallReturn {
+  // 通话状态
+  callState: VideoCallState;
+
+  // 通话控制
+  initiateCall: (targetId: string, targetName: string) => Promise<void>;
+  acceptCall: () => Promise<void>;
+  rejectCall: (reason?: string) => void;
+  endCall: () => void;
+
+  // 媒体控制
+  toggleMute: () => void;
+  toggleVideo: () => void;
+
+  // 窗口控制
+  minimizeWindow: () => void;
+  normalizeWindow: () => void;
+  maximizeWindow: () => void;
+
+  // 媒体流管理
+  switchCamera: () => Promise<void>;
+  setVideoQuality: (quality: 'low' | 'medium' | 'high') => Promise<void>;
+  getVideoRefs: () => {
+    localVideoRef: React.RefObject<HTMLVideoElement>;
+    remoteVideoRef: React.RefObject<HTMLVideoElement>;
+  };
+
+  // 内部处理函数（供useWebRTC调用）
+  handleIncomingCall: (invite: VideoCallInviteMessage) => void;
+  handleCallAccepted: () => void;
 }
 
 export interface RegisterMessage extends SignalingMessage {
@@ -125,6 +230,11 @@ export interface UseWebRTCOptions {
   iceServers?: RTCIceServer[];
   chunkSize?: number;
   autoFetchICEServers?: boolean; // 是否自动从服务器获取 ICE 服务器配置
+  // 视频通话回调
+  onCallInvite?: (invite: VideoCallInviteMessage) => void;
+  onCallAccept?: (accept: VideoCallAcceptMessage) => void;
+  onCallReject?: (reject: VideoCallRejectMessage) => void;
+  onCallEnd?: (end: VideoCallEndMessage) => void;
 }
 
 export interface ICEServerConfig {
@@ -165,4 +275,7 @@ export interface UseWebRTCReturn {
   // 状态管理
   clearTransfers: () => void;
   removeTransfer: (transferId: string) => void;
+
+  // 视频通话功能
+  videoCall: UseVideoCallReturn;
 }
