@@ -16,7 +16,7 @@ packages:
   - "14_path"
   - "22_word-break_and_white-space_and_word-wrap"
   - "23_arraybuffer_and_typedarray"
-  - "24_slice_download_or_upload/**"
+  - "24_slice_download_or_upload"
   - "27_react_useEffect_correct_usage"
   - "28_swc_explore"
   - "30_websocket"
