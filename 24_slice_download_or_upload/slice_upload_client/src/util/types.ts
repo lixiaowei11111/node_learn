@@ -72,7 +72,10 @@ export interface RequestVerifyType {
 // 上传任务接口
 export interface UploadTask {
   id: string; // 任务ID（通常使用文件hash）
-  file: File; // 要上传的文件
+  file: File; // 文件对象
+  fileName: string; // 文件名
+  fileSize: number; // 文件大小
+  fileType: string; // 文件类型
   fileHash: string; // 文件哈希
   chunkSize: number; // 分片大小
   chunks: ChunkType[]; // 所有分片

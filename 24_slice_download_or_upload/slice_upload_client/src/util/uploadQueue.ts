@@ -109,6 +109,11 @@ export class UploadQueue {
     onHashProgress?: (progress: number, status: string) => void,
     hashType: HashType = 'blake3',
   ): Promise<string> {
+    // webWorker会导致一部分File数据丢失
+    const fileName = file.name;
+    const fileSize = file.size;
+    const fileType = file.type;
+    console.log('[debug] addTask fileSize:', fileSize);
     // 处理文件，计算哈希并分块
     const start = performance.now();
     const { fileHash, chunks } = await processFile(
@@ -141,6 +146,9 @@ export class UploadQueue {
         id: taskId,
         file,
         fileHash,
+        fileName,
+        fileSize,
+        fileType,
         chunkSize,
         chunks,
         uploadedChunks: Array(chunks.length).fill(false),
@@ -149,9 +157,7 @@ export class UploadQueue {
         progress: 0,
       };
     }
-
     console.log('[debug] verify start task:', task);
-
     // 验证文件上传状态并更新任务信息
     await this.verifyAndUpdateTask(task);
 
@@ -220,10 +226,14 @@ export class UploadQueue {
    */
   private async verifyAndUpdateTask(task: UploadTask): Promise<void> {
     try {
+      const { fileHash, fileName, fileSize, fileType, chunkSize } = task;
+      console.log('[debug] verifyAndUpdateTask fileSize ', fileSize);
       const verifyResult = await verifyChunk({
-        fileHash: task.fileHash,
-        file: task.file,
-        chunkSize: task.chunkSize,
+        fileHash,
+        fileName,
+        fileSize,
+        fileType,
+        chunkSize,
       });
 
       if (!verifyResult) return;

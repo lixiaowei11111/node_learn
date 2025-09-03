@@ -524,7 +524,7 @@ const FileUploader: React.FC = () => {
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 cursor-pointer"
               >
                 <FolderOpen className="h-4 w-4" />
                 选择文件
@@ -532,7 +532,7 @@ const FileUploader: React.FC = () => {
               <Button
                 onClick={handleUpload}
                 disabled={files.length === 0 || uploading}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 cursor-pointer"
               >
                 <Upload className="h-4 w-4" />
                 {uploading ? '上传中...' : '开始上传'}
@@ -541,7 +541,7 @@ const FileUploader: React.FC = () => {
                 onClick={handleClearAll}
                 disabled={files.length === 0}
                 variant="destructive"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
                 清空列表
@@ -623,7 +623,7 @@ const FileUploader: React.FC = () => {
                         size="sm"
                         variant="default"
                         onClick={() => handleStartSingleFile(index)}
-                        className="h-8 px-3"
+                        className="h-8 px-3 cursor-pointer"
                         disabled={fileInfo.isCalculatingHash}
                       >
                         <Play className="h-3 w-3 mr-1" />
@@ -661,7 +661,7 @@ const FileUploader: React.FC = () => {
                       size="sm"
                       variant="destructive"
                       onClick={() => handleRemoveFile(index)}
-                      className="h-8 px-3"
+                      className="h-8 px-3 cursor-pointer"
                     >
                       <X className="h-3 w-3 mr-1" />
                       移除

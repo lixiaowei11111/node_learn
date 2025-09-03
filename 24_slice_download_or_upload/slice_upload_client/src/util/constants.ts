@@ -1,7 +1,7 @@
 import { Map2Enum } from './types';
 
 // 默认分片大小 5MB
-export const DEFAULT_CHUNK_SIZE = 100 * 1024 * 1024;
+export const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024;
 
 // 任务状态枚举
 export const taskStatusMap = {

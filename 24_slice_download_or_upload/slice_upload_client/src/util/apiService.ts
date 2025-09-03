@@ -15,34 +15,54 @@ import {
  */
 export const verifyChunk = async ({
   fileHash,
-  file,
+  fileName,
+  fileSize,
+  fileType,
   chunkSize,
 }: VerifyChunkParams & {
-  file: File;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
   chunkSize: number;
 }): Promise<VerifyResponseType | void> => {
   try {
     // 计算总分片数
-    const chunkTotal = Math.ceil(file.size / chunkSize);
+    const chunkTotal = Math.ceil(fileSize / chunkSize);
+
+    console.log('[debug] verifyChunk fileSize', fileSize);
 
     const params: RequestVerifyType = {
       fileHash,
-      filename: file.name,
-      fileSize: file.size,
-      chunkSize,
-      chunkTotal,
-      fileType: file.type || '',
+      filename: fileName,
+      fileSize: Number(fileSize), // 确保是数字类型
+      chunkSize: Number(chunkSize), // 确保是数字类型
+      chunkTotal: Number(chunkTotal), // 确保是数字类型
+      fileType: fileType,
     };
 
     const response = await request.post<AxiosResponseType<VerifyResponseType>>(
       '/verify',
       params,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
     );
     console.log('[debug] 验证文件完成', response);
     // 根据后端返回的数据结构直接返回结果
     return response.data.data;
   } catch (error) {
-    console.error('验证文件上传状态失败:', error);
+    // 增强错误日志
+    if (error instanceof AxiosError) {
+      console.error(
+        '验证文件上传状态失败:',
+        error.response?.data,
+        error.message,
+      );
+    } else {
+      console.error('验证文件上传状态失败:', error);
+    }
     throw error;
   }
 };
